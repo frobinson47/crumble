@@ -1,10 +1,38 @@
 <?php
 
+require_once __DIR__ . '/IngredientParser.php';
+
 class RecipeScraper {
+
+    private IngredientParser $ingredientParser;
+
+    private const USER_AGENTS = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+    ];
+
+    private const ERROR_MESSAGES = [
+        'invalid_url' => "This doesn't look like a valid URL.",
+        'fetch_failed' => "Couldn't reach this website. Check the URL and try again.",
+        'fetch_blocked' => "This website blocked our request. Try copying the recipe manually.",
+        'fetch_timeout' => "The website took too long to respond. Try again later.",
+        'parse_failed' => "Found the page but couldn't find recipe data. You can enter it manually.",
+    ];
+
+    public function __construct() {
+        $this->ingredientParser = new IngredientParser();
+    }
+
+    private function randomUserAgent(): string {
+        return self::USER_AGENTS[array_rand(self::USER_AGENTS)];
+    }
 
     /**
      * Scrape a recipe from a URL.
-     * Tries JSON-LD first, then microdata, then Open Graph.
+     * Tries JSON-LD, microdata, heuristic HTML, then Open Graph.
      * Returns parsed recipe data. Never throws — returns partial data on failure.
      */
     public function scrape(string $url): array {
@@ -22,16 +50,21 @@ class RecipeScraper {
 
         // Validate URL
         if (!$this->isValidUrl($url)) {
-            $result['error'] = 'Invalid or blocked URL';
+            $result['error_code'] = 'invalid_url';
+            $result['error'] = self::ERROR_MESSAGES['invalid_url'];
             return $result;
         }
 
         // Fetch HTML
-        $html = $this->fetchUrl($url);
-        if ($html === false) {
-            $result['error'] = 'Failed to fetch URL';
+        $fetchResult = $this->fetchUrl($url);
+        if ($fetchResult['html'] === null) {
+            $code = $fetchResult['error_code'];
+            $result['error_code'] = $code;
+            $result['error'] = self::ERROR_MESSAGES[$code] ?? self::ERROR_MESSAGES['fetch_failed'];
             return $result;
         }
+
+        $html = $fetchResult['html'];
 
         // Try JSON-LD first
         $jsonLd = $this->parseJsonLd($html);
@@ -45,13 +78,33 @@ class RecipeScraper {
             return array_merge($result, $microdata);
         }
 
-        // Fallback to Open Graph
+        // Try heuristic HTML parsing
+        $heuristic = $this->parseHeuristic($html);
+        if ($heuristic) {
+            return array_merge($result, $heuristic);
+        }
+
+        // Fallback to Open Graph (metadata only, no ingredients/instructions)
         $og = $this->parseOpenGraph($html);
         if ($og) {
             return array_merge($result, $og);
         }
 
-        $result['error'] = 'Could not parse recipe data from this URL';
+        // Try cached/AMP version for JS-rendered pages
+        $cachedHtml = $this->fetchCachedVersion($url);
+        if ($cachedHtml !== null) {
+            $jsonLd = $this->parseJsonLd($cachedHtml);
+            if ($jsonLd) return array_merge($result, $jsonLd);
+
+            $microdata = $this->parseMicrodata($cachedHtml);
+            if ($microdata) return array_merge($result, $microdata);
+
+            $heuristic = $this->parseHeuristic($cachedHtml);
+            if ($heuristic) return array_merge($result, $heuristic);
+        }
+
+        $result['error_code'] = 'parse_failed';
+        $result['error'] = self::ERROR_MESSAGES['parse_failed'];
         return $result;
     }
 
@@ -93,9 +146,9 @@ class RecipeScraper {
 
     /**
      * Fetch URL content with browser-like User-Agent and timeout.
-     * Uses cURL for HTTPS support (PHP openssl ext may not be available).
+     * Returns array with 'html' and 'error_code' keys.
      */
-    private function fetchUrl(string $url): string|false {
+    private function fetchUrl(string $url): array {
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
@@ -103,7 +156,8 @@ class RecipeScraper {
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 15,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_USERAGENT => $this->randomUserAgent(),
                 CURLOPT_HTTPHEADER => ['Accept: text/html,application/xhtml+xml'],
                 CURLOPT_SSL_VERIFYPEER => true,
             ]);
@@ -119,20 +173,33 @@ class RecipeScraper {
 
             $html = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_errno($ch);
             curl_close($ch);
 
-            if ($html === false || $httpCode !== 200) {
-                return false;
+            if ($curlError === 28) { // CURLE_OPERATION_TIMEDOUT
+                return ['html' => null, 'error_code' => 'fetch_timeout'];
             }
 
-            return $html;
+            if ($html === false || $curlError !== 0) {
+                return ['html' => null, 'error_code' => 'fetch_failed'];
+            }
+
+            if ($httpCode === 403 || $httpCode === 429) {
+                return ['html' => null, 'error_code' => 'fetch_blocked'];
+            }
+
+            if ($httpCode !== 200) {
+                return ['html' => null, 'error_code' => 'fetch_failed'];
+            }
+
+            return ['html' => $html, 'error_code' => null];
         }
 
         // Fallback to file_get_contents
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
-                'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\nAccept: text/html,application/xhtml+xml\r\n",
+                'header' => "User-Agent: " . $this->randomUserAgent() . "\r\nAccept: text/html,application/xhtml+xml\r\n",
                 'timeout' => 10,
                 'follow_location' => true,
                 'max_redirects' => 5,
@@ -144,7 +211,35 @@ class RecipeScraper {
         ]);
 
         $html = @file_get_contents($url, false, $context);
-        return $html;
+        if ($html === false) {
+            return ['html' => null, 'error_code' => 'fetch_failed'];
+        }
+        return ['html' => $html, 'error_code' => null];
+    }
+
+    /**
+     * Try fetching a pre-rendered version of a JS-heavy page.
+     */
+    private function fetchCachedVersion(string $url): ?string {
+        $parsed = parse_url($url);
+        $domain = $parsed['host'] ?? '';
+        $path = $parsed['path'] ?? '/';
+
+        // Try Google AMP cache
+        $ampUrl = 'https://cdn.ampproject.org/c/s/' . $domain . $path;
+        $ampResult = $this->fetchUrl($ampUrl);
+        if ($ampResult['html'] !== null) {
+            return $ampResult['html'];
+        }
+
+        // Try Google Web Cache
+        $cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:' . urlencode($url);
+        $cacheResult = $this->fetchUrl($cacheUrl);
+        if ($cacheResult['html'] !== null) {
+            return $cacheResult['html'];
+        }
+
+        return null;
     }
 
     /**
@@ -227,14 +322,15 @@ class RecipeScraper {
             $result['image_url'] = $image;
         }
 
-        // Ingredients
+        // Ingredients — parse into structured amount/unit/name
         $result['ingredients'] = [];
         if (!empty($data['recipeIngredient']) && is_array($data['recipeIngredient'])) {
             foreach ($data['recipeIngredient'] as $i => $ingredient) {
+                $parsed = $this->ingredientParser->parse($this->cleanText($ingredient));
                 $result['ingredients'][] = [
-                    'name' => $this->cleanText($ingredient),
-                    'amount' => null,
-                    'unit' => null,
+                    'name' => $parsed['name'],
+                    'amount' => $parsed['amount'],
+                    'unit' => $parsed['unit'],
                     'sort_order' => $i,
                 ];
             }
@@ -329,16 +425,17 @@ class RecipeScraper {
             $result['image_url'] = $imgEl->getAttribute('src') ?: $imgEl->getAttribute('content') ?: '';
         }
 
-        // Ingredients
+        // Ingredients — parse into structured amount/unit/name
         $result['ingredients'] = [];
         $ingNodes = $xpath->query('.//*[@itemprop="recipeIngredient" or @itemprop="ingredients"]', $recipeEl);
         for ($i = 0; $i < $ingNodes->length; $i++) {
             $text = $this->cleanText($ingNodes->item($i)->textContent);
             if ($text !== '') {
+                $parsed = $this->ingredientParser->parse($text);
                 $result['ingredients'][] = [
-                    'name' => $text,
-                    'amount' => null,
-                    'unit' => null,
+                    'name' => $parsed['name'],
+                    'amount' => $parsed['amount'],
+                    'unit' => $parsed['unit'],
                     'sort_order' => $i,
                 ];
             }
@@ -360,6 +457,157 @@ class RecipeScraper {
         }
 
         return $result;
+    }
+
+    /**
+     * Heuristic fallback: extract recipe content from common HTML patterns.
+     */
+    private function parseHeuristic(string $html): ?array {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $xpath = new \DOMXPath($dom);
+
+        $result = [];
+
+        // Title: first <h1>, or <h2> if no <h1>
+        $h1 = $xpath->query('//h1');
+        if ($h1->length > 0) {
+            $result['title'] = $this->cleanText($h1->item(0)->textContent);
+        } else {
+            $h2 = $xpath->query('//h2');
+            if ($h2->length > 0) {
+                $result['title'] = $this->cleanText($h2->item(0)->textContent);
+            }
+        }
+
+        if (empty($result['title'])) {
+            return null;
+        }
+
+        // Ingredients: find <li> inside containers with ingredient-related class/id
+        $result['ingredients'] = $this->extractListItems($xpath, ['ingredient']);
+
+        // Instructions: find <li> or <p> inside containers with instruction-related class/id
+        $instructionKeywords = ['instruction', 'direction', 'method', 'step', 'preparation'];
+        $instructionItems = $this->extractListItems($xpath, $instructionKeywords);
+        if (empty($instructionItems)) {
+            $instructionItems = $this->extractParagraphs($xpath, $instructionKeywords);
+        }
+        $result['instructions'] = array_map(function ($item) {
+            return is_array($item) ? ($item['name'] ?? '') : $item;
+        }, $instructionItems);
+
+        // Image
+        $result['image_url'] = $this->findHeroImage($xpath);
+
+        // Parse times/servings from text near the top
+        $metaText = '';
+        $metaNodes = $xpath->query('//main|//article|//div[contains(@class,"recipe")]');
+        if ($metaNodes->length > 0) {
+            $metaText = substr($metaNodes->item(0)->textContent, 0, 2000);
+        }
+
+        if (preg_match('/prep[:\s]*(\d+)\s*(?:min|minute)/i', $metaText, $m)) {
+            $result['prep_time'] = (int) $m[1];
+        }
+        if (preg_match('/cook[:\s]*(\d+)\s*(?:min|minute)/i', $metaText, $m)) {
+            $result['cook_time'] = (int) $m[1];
+        }
+        if (preg_match('/serv(?:es|ings?)[:\s]*(\d+)/i', $metaText, $m)) {
+            $result['servings'] = (int) $m[1];
+        }
+
+        // Only return if we got ingredients or instructions
+        if (empty($result['ingredients']) && empty($result['instructions'])) {
+            return null;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extract <li> items from containers matching keyword patterns in class or id.
+     */
+    private function extractListItems(\DOMXPath $xpath, array $keywords): array {
+        $items = [];
+
+        foreach ($keywords as $kw) {
+            $containers = $xpath->query(
+                '//*[contains(translate(@class,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"' . $kw . '") or '
+                . 'contains(translate(@id,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"' . $kw . '")]'
+            );
+
+            for ($i = 0; $i < $containers->length; $i++) {
+                $container = $containers->item($i);
+                $lis = $xpath->query('.//li', $container);
+                for ($j = 0; $j < $lis->length; $j++) {
+                    $text = $this->cleanText($lis->item($j)->textContent);
+                    if ($text !== '' && strlen($text) > 2) {
+                        $parsed = $this->ingredientParser->parse($text);
+                        $items[] = [
+                            'name' => $parsed['name'],
+                            'amount' => $parsed['amount'],
+                            'unit' => $parsed['unit'],
+                            'sort_order' => count($items),
+                        ];
+                    }
+                }
+                if (!empty($items)) break 2;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Extract <p> tags from containers matching keyword patterns.
+     */
+    private function extractParagraphs(\DOMXPath $xpath, array $keywords): array {
+        $items = [];
+
+        foreach ($keywords as $kw) {
+            $containers = $xpath->query(
+                '//*[contains(translate(@class,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"' . $kw . '") or '
+                . 'contains(translate(@id,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"' . $kw . '")]'
+            );
+
+            for ($i = 0; $i < $containers->length; $i++) {
+                $container = $containers->item($i);
+                $ps = $xpath->query('.//p', $container);
+                for ($j = 0; $j < $ps->length; $j++) {
+                    $text = $this->cleanText($ps->item($j)->textContent);
+                    if ($text !== '' && strlen($text) > 10) {
+                        $items[] = $text;
+                    }
+                }
+                if (!empty($items)) break 2;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Find the most likely hero/recipe image on the page.
+     */
+    private function findHeroImage(\DOMXPath $xpath): string {
+        $contexts = ['//main//img', '//article//img', '//*[contains(@class,"recipe")]//img', '//img'];
+
+        foreach ($contexts as $query) {
+            $imgs = $xpath->query($query);
+            for ($i = 0; $i < $imgs->length; $i++) {
+                $img = $imgs->item($i);
+                $src = $img->getAttribute('src') ?: $img->getAttribute('data-src') ?: '';
+                if ($src === '' || strpos($src, 'data:') === 0) continue;
+                // Skip tiny images (icons, avatars)
+                $width = (int) $img->getAttribute('width');
+                $height = (int) $img->getAttribute('height');
+                if (($width > 0 && $width < 100) || ($height > 0 && $height < 100)) continue;
+                return $src;
+            }
+        }
+
+        return '';
     }
 
     /**
