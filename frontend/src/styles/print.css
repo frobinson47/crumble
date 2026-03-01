@@ -1,0 +1,164 @@
+@media print {
+  /* Hide navigation, chrome, and interactive elements */
+  header,
+  aside,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Hide action buttons, back button, modals, tags, source link */
+  button,
+  [role="dialog"],
+  a[target="_blank"] {
+    display: none !important;
+  }
+
+  /* Reset page background and layout */
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove container max-width and padding from layout wrapper */
+  main,
+  main > div {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Recipe title */
+  h1 {
+    font-size: 16pt !important;
+    color: black !important;
+    margin-bottom: 4pt !important;
+  }
+
+  /* Section headings */
+  h2 {
+    font-size: 14pt !important;
+    color: black !important;
+    margin-bottom: 6pt !important;
+  }
+
+  /* Description */
+  h1 + p {
+    font-size: 11pt !important;
+    color: #333 !important;
+    margin-bottom: 8pt !important;
+  }
+
+  /* Metadata row — show servings text inline but hide adjuster buttons */
+  .flex.flex-wrap.items-center.gap-4 {
+    margin-bottom: 8pt !important;
+    gap: 12pt !important;
+  }
+
+  /* Show the servings count text, hide +/- buttons */
+  [aria-label="Decrease servings"],
+  [aria-label="Increase servings"] {
+    display: none !important;
+  }
+
+  /* Make sure servings text is visible */
+  .flex.items-center.gap-2 span {
+    display: inline !important;
+    color: black !important;
+  }
+
+  /* Tag badges — hide */
+  .flex.flex-wrap.gap-2.mb-6 {
+    display: none !important;
+  }
+
+  /* Two-column grid → single column for print */
+  .grid {
+    display: block !important;
+  }
+
+  /* Remove card styling (shadows, rounded corners, backgrounds) */
+  .bg-white,
+  .rounded-2xl,
+  .shadow-md {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ingredient list */
+  ul {
+    list-style-type: disc !important;
+    padding-left: 18pt !important;
+  }
+
+  ul li {
+    display: list-item !important;
+    padding: 2pt 0 !important;
+    font-size: 11pt !important;
+    color: black !important;
+  }
+
+  /* Ingredient checkboxes — hide */
+  ul li input[type="checkbox"] {
+    display: none !important;
+  }
+
+  /* Ingredient text */
+  ul li span {
+    color: black !important;
+    opacity: 1 !important;
+  }
+
+  /* Instructions — numbered list */
+  ol {
+    list-style-type: decimal !important;
+    padding-left: 18pt !important;
+  }
+
+  ol li {
+    padding: 4pt 0 !important;
+    font-size: 11pt !important;
+    color: black !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Hero image — show but constrain */
+  img {
+    max-width: 100% !important;
+    max-height: 300pt !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+    margin-bottom: 8pt !important;
+  }
+
+  /* Sticky ingredient sidebar — unstick for print */
+  .md\:sticky {
+    position: static !important;
+  }
+
+  /* Ingredients section — add bottom margin */
+  .md\:sticky + div,
+  .md\:self-start {
+    margin-bottom: 16pt !important;
+  }
+
+  /* Ensure all text is black */
+  .text-brown,
+  .text-brown-light,
+  .text-warm-gray,
+  .text-terracotta,
+  .text-sage {
+    color: black !important;
+  }
+
+  /* Hide the fixed overlays (CookMode, modals) */
+  .fixed {
+    display: none !important;
+  }
+}

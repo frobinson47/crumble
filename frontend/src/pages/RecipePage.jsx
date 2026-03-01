@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Clock, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
-  ArrowLeft, Plus
+  ArrowLeft, Plus, Printer
 } from 'lucide-react';
 import useRecipes from '../hooks/useRecipes';
 import { useAuth } from '../hooks/useAuth';
@@ -240,6 +240,14 @@ export default function RecipePage() {
         >
           <ShoppingCart size={18} />
           Add to Grocery List
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+          className="print:hidden"
+        >
+          <Printer size={18} />
+          Print
         </Button>
       </div>
 
