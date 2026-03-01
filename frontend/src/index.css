@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FFF8F0;
+  --color-cream-dark: #F5EDE3;
+  --color-terracotta: #C1694F;
+  --color-terracotta-light: #D4896F;
+  --color-terracotta-dark: #A8533A;
+  --color-brown: #3E2723;
+  --color-brown-light: #5D4037;
+  --color-sage: #7D9B76;
+  --color-sage-light: #A8C5A0;
+  --color-sage-dark: #5F7A58;
+  --color-warm-gray: #8D7B6E;
+  --font-family-display: 'Nunito', sans-serif;
+  --font-family-body: 'Nunito', sans-serif;
+}
+
+/* Base styles */
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: #FFF8F0;
+  color: #3E2723;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F5EDE3;
+}
+::-webkit-scrollbar-thumb {
+  background: #8D7B6E;
+  border-radius: 3px;
+}
+
+/* Auto-expanding textarea */
+.auto-expand {
+  field-sizing: content;
+  min-height: 2.5rem;
+}
+
+/* Strikethrough animation for grocery items */
+.checked-item {
+  text-decoration: line-through;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}

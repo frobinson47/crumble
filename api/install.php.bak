@@ -1,0 +1,92 @@
+<?php
+
+/**
+ * Crumble Installation Script
+ *
+ * Executes the database schema, generates admin password hash,
+ * creates required directories, and renames itself to .bak.
+ */
+
+header('Content-Type: application/json; charset=utf-8');
+
+try {
+    // ─── Database Connection ────────────────────────────────────────────
+    $config = require __DIR__ . '/config/database.php';
+
+    // Connect without specifying database (it may not exist yet)
+    $dsn = "mysql:host={$config['host']};charset={$config['charset']}";
+    $pdo = new PDO($dsn, $config['username'], $config['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    // ─── Execute Schema ─────────────────────────────────────────────────
+    $schemaPath = __DIR__ . '/../database/schema.sql';
+    if (!file_exists($schemaPath)) {
+        throw new RuntimeException('schema.sql not found at: ' . $schemaPath);
+    }
+
+    $schemaSql = file_get_contents($schemaPath);
+
+    // Split on semicolons (PDO doesn't support multi-statement by default)
+    // Handle edge cases: ignore semicolons inside strings
+    $statements = array_filter(
+        array_map('trim', explode(';', $schemaSql)),
+        fn($s) => $s !== '' && !str_starts_with($s, '--')
+    );
+
+    foreach ($statements as $statement) {
+        // Skip empty or comment-only statements
+        $cleaned = trim($statement);
+        if ($cleaned === '' || preg_match('/^--/', $cleaned)) {
+            continue;
+        }
+        $pdo->exec($cleaned);
+    }
+
+    // ─── Generate Admin Password Hash ───────────────────────────────────
+    $adminPassword = 'admin';
+    $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
+
+    // Reconnect with database selected
+    $dsnDb = "mysql:host={$config['host']};dbname={$config['dbname']};charset={$config['charset']}";
+    $pdo = new PDO($dsnDb, $config['username'], $config['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+
+    $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE username = ?');
+    $stmt->execute([$hash, 'admin']);
+
+    // ─── Create Upload Directory ────────────────────────────────────────
+    $uploadDir = __DIR__ . '/../uploads/recipes';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    // ─── Output Success ─────────────────────────────────────────────────
+    $response = [
+        'success' => true,
+        'message' => 'Installation complete',
+        'credentials' => [
+            'username' => 'admin',
+            'password' => 'admin',
+        ],
+        'warning' => 'Change the admin password after first login',
+    ];
+
+    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+    // ─── Rename Self to .bak ────────────────────────────────────────────
+    $currentFile = __FILE__;
+    $bakFile = $currentFile . '.bak';
+    // Use rename (safer than delete on Windows)
+    @rename($currentFile, $bakFile);
+
+} catch (\Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage(),
+        'code' => 500,
+    ], JSON_PRETTY_PRINT);
+}

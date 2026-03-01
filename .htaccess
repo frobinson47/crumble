@@ -1,0 +1,17 @@
+RewriteEngine On
+
+# API routes
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# Uploaded files — pass through
+RewriteCond %{REQUEST_URI} ^/crumble/uploads/
+RewriteRule ^(.*)$ $1 [L]
+
+# Frontend static assets — pass through
+RewriteCond %{REQUEST_URI} ^/crumble/frontend/dist/
+RewriteRule ^(.*)$ $1 [L]
+
+# SPA fallback — everything else to frontend index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ frontend/dist/index.html [QSA,L]
