@@ -10,6 +10,7 @@ import AddRecipePage from './pages/AddRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
 import GroceryPage from './pages/GroceryPage';
 import AdminPage from './pages/AdminPage';
+import BulkImportPage from './pages/BulkImportPage';
 
 export default function App() {
   return (
@@ -56,6 +57,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <EditRecipePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bulk-import"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BulkImportPage />
                 </Layout>
               </ProtectedRoute>
             }

@@ -196,4 +196,90 @@ class RecipeController {
 
         return $result;
     }
+
+    /**
+     * POST /recipes/import-batch
+     * Expects JSON: { urls: string[] }
+     * Scrapes each URL and returns array of results.
+     */
+    public function importBatch(): array {
+        Auth::requireAuth();
+
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($input['urls']) || !is_array($input['urls'])) {
+            http_response_code(400);
+            return ['error' => 'An array of URLs is required', 'code' => 400];
+        }
+
+        $urls = array_filter(array_map('trim', $input['urls']), fn($u) => $u !== '');
+
+        if (count($urls) === 0) {
+            http_response_code(400);
+            return ['error' => 'At least one URL is required', 'code' => 400];
+        }
+
+        if (count($urls) > 50) {
+            http_response_code(400);
+            return ['error' => 'Maximum 50 URLs per batch', 'code' => 400];
+        }
+
+        require_once __DIR__ . '/../services/RecipeScraper.php';
+        $scraper = new RecipeScraper();
+
+        $results = [];
+        foreach ($urls as $url) {
+            $result = $scraper->scrape($url);
+            if (!empty($result['error'])) {
+                $results[] = [
+                    'url' => $url,
+                    'status' => 'error',
+                    'error_code' => $result['error_code'] ?? 'parse_failed',
+                    'error_message' => $result['error'] ?? $result['error_message'] ?? 'Unknown error',
+                ];
+            } else {
+                $results[] = [
+                    'url' => $url,
+                    'status' => 'success',
+                    'recipe' => $result,
+                ];
+            }
+        }
+
+        return ['results' => $results];
+    }
+
+    /**
+     * POST /recipes/import-mealie
+     * Accepts multipart upload of a Mealie export .zip file.
+     */
+    public function importMealie(): array {
+        Auth::requireAuth();
+
+        if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            return ['error' => 'A .zip file is required', 'code' => 400];
+        }
+
+        require_once __DIR__ . '/../services/MealieImporter.php';
+        $importer = new MealieImporter();
+        return $importer->import($_FILES['file']['tmp_name']);
+    }
+
+    /**
+     * POST /recipes/import-paprika
+     * Accepts multipart upload of a .paprikarecipes file.
+     */
+    public function importPaprika(): array {
+        Auth::requireAuth();
+
+        if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            return ['error' => 'A .paprikarecipes file is required', 'code' => 400];
+        }
+
+        require_once __DIR__ . '/../services/PaprikaImporter.php';
+        $importer = new PaprikaImporter();
+        return $importer->import($_FILES['file']['tmp_name']);
+    }
 }

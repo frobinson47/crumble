@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, Link2 } from 'lucide-react';
 import RecipeForm from '../components/recipe/RecipeForm';
 import ImportForm from '../components/recipe/ImportForm';
@@ -7,9 +7,22 @@ import useRecipes from '../hooks/useRecipes';
 
 export default function AddRecipePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { createRecipe, importRecipe, isLoading } = useRecipes();
   const [mode, setMode] = useState('choose'); // 'choose', 'manual', 'import'
   const [importedData, setImportedData] = useState(null);
+
+  // Handle bulk import review redirect
+  useEffect(() => {
+    if (searchParams.get('review') === 'bulk') {
+      const stored = sessionStorage.getItem('bulkImportReview');
+      if (stored) {
+        setImportedData(JSON.parse(stored));
+        setMode('manual');
+        sessionStorage.removeItem('bulkImportReview');
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (data, imageFile) => {
     try {

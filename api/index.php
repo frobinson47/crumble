@@ -101,6 +101,12 @@ try {
 
             if ($id === 'import' && $method === 'POST') {
                 $response = $controller->import();
+            } elseif ($id === 'import-batch' && $method === 'POST') {
+                $response = $controller->importBatch();
+            } elseif ($id === 'import-mealie' && $method === 'POST') {
+                $response = $controller->importMealie();
+            } elseif ($id === 'import-paprika' && $method === 'POST') {
+                $response = $controller->importPaprika();
             } elseif ($id === null) {
                 // /recipes
                 switch ($method) {

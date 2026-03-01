@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot } from 'lucide-react';
+import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Sidebar() {
@@ -9,6 +9,7 @@ export default function Sidebar() {
   const navItems = [
     { to: '/', icon: LayoutGrid, label: 'Recipes' },
     { to: '/add', icon: Plus, label: 'Add Recipe' },
+    { to: '/bulk-import', icon: Upload, label: 'Bulk Import' },
     { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
   ];
 
