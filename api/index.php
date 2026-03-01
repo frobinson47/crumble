@@ -224,6 +224,52 @@ try {
             }
             break;
 
+        // ── Admin Routes ─────────────────────────────────────────────────
+        case 'admin':
+            if ($id === 'reparse-ingredients' && $method === 'POST') {
+                require_once __DIR__ . '/middleware/Auth.php';
+                Auth::requireAdmin();
+
+                require_once __DIR__ . '/services/IngredientParser.php';
+                require_once __DIR__ . '/models/Database.php';
+
+                $parser = new IngredientParser();
+                $db = Database::getInstance();
+
+                // Find ingredients where amount is null/empty but name looks like it has an amount
+                $stmt = $db->query("
+                    SELECT id, name FROM ingredients
+                    WHERE (amount IS NULL OR amount = '')
+                    AND name REGEXP '^[0-9]'
+                ");
+                $rows = $stmt->fetchAll();
+
+                $updateStmt = $db->prepare('
+                    UPDATE ingredients SET amount = ?, unit = ?, name = ? WHERE id = ?
+                ');
+
+                $updated = 0;
+                foreach ($rows as $row) {
+                    $parsed = $parser->parse($row['name']);
+                    if ($parsed['amount'] !== null) {
+                        $updateStmt->execute([
+                            $parsed['amount'],
+                            $parsed['unit'],
+                            $parsed['name'],
+                            $row['id'],
+                        ]);
+                        $updated++;
+                    }
+                }
+
+                $response = [
+                    'message' => "Re-parsed $updated ingredients",
+                    'total_checked' => count($rows),
+                    'updated' => $updated,
+                ];
+            }
+            break;
+
         // ── Root / Health Check ─────────────────────────────────────────
         case '':
             $response = [
