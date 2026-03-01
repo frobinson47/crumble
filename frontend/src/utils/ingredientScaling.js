@@ -83,9 +83,21 @@ export function formatAmount(num) {
   return String(rounded);
 }
 
+// Regex to extract a leading amount (with optional fraction/range) from an ingredient name string.
+// Matches: "2 cups flour", "1/2 tsp salt", "1 1/2 cups sugar", "2-3 cloves garlic"
+const LEADING_AMOUNT_RE = /^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?(?:\s*-\s*(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?))?)\s+(.+)$/;
+
+function scaleAmount(parsed, ratio) {
+  if (typeof parsed === 'object' && parsed.low != null) {
+    return { low: parsed.low * ratio, high: parsed.high * ratio };
+  }
+  return parsed * ratio;
+}
+
 /**
  * Scale ingredients array based on servings ratio.
  * Returns a new array with scaled amounts.
+ * Handles both structured (amount field) and unstructured (amount baked into name) ingredients.
  */
 export function scaleIngredients(ingredients, originalServings, newServings) {
   if (!originalServings || !newServings || originalServings === newServings) {
@@ -95,16 +107,24 @@ export function scaleIngredients(ingredients, originalServings, newServings) {
   const ratio = newServings / originalServings;
 
   return ingredients.map(ing => {
+    // Case 1: Structured amount field
     const parsed = parseAmount(ing.amount);
-    if (parsed === null) return ing;
-
-    let scaled;
-    if (typeof parsed === 'object' && parsed.low != null) {
-      scaled = { low: parsed.low * ratio, high: parsed.high * ratio };
-    } else {
-      scaled = parsed * ratio;
+    if (parsed !== null) {
+      return { ...ing, amount: formatAmount(scaleAmount(parsed, ratio)) };
     }
 
-    return { ...ing, amount: formatAmount(scaled) };
+    // Case 2: Amount embedded in name (imported recipes)
+    if (ing.name) {
+      const match = ing.name.match(LEADING_AMOUNT_RE);
+      if (match) {
+        const nameParsed = parseAmount(match[1]);
+        if (nameParsed !== null) {
+          const scaled = formatAmount(scaleAmount(nameParsed, ratio));
+          return { ...ing, name: `${scaled} ${match[2]}` };
+        }
+      }
+    }
+
+    return ing;
   });
 }
