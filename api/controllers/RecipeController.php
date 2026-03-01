@@ -299,4 +299,24 @@ class RecipeController {
         $importer = new PaprikaImporter();
         return $importer->import($_FILES['file']['tmp_name']);
     }
+
+    /**
+     * GET /recipes/featured
+     */
+    public function featured(): array {
+        $model = new Recipe();
+        $recipe = $model->getFeatured();
+        if (!$recipe) {
+            return ['recipe' => null];
+        }
+        return ['recipe' => $recipe];
+    }
+
+    /**
+     * GET /recipes/{id}/related
+     */
+    public function related(int $id): array {
+        $model = new Recipe();
+        return ['recipes' => $model->getRelated($id)];
+    }
 }

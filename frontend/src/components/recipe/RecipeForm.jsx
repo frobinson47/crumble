@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, GripVertical, ChevronUp, ChevronDown, Upload, Image } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronUp, ChevronDown, Upload, Image, ChevronRight } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import TagBadge from '../ui/TagBadge';
@@ -30,6 +30,13 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [sourceImageUrl, setSourceImageUrl] = useState('');
+  const [showNutrition, setShowNutrition] = useState(false);
+  const [calories, setCalories] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [fiber, setFiber] = useState('');
+  const [sugar, setSugar] = useState('');
   const [errors, setErrors] = useState({});
 
   const fileInputRef = useRef(null);
@@ -78,6 +85,17 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       } else if (initialData.source_image_url) {
         setSourceImageUrl(initialData.source_image_url);
         setImagePreview(initialData.source_image_url);
+      }
+
+      // Nutrition
+      if (initialData.calories || initialData.protein || initialData.carbs || initialData.fat || initialData.fiber || initialData.sugar) {
+        setShowNutrition(true);
+        setCalories(initialData.calories || '');
+        setProtein(initialData.protein || '');
+        setCarbs(initialData.carbs || '');
+        setFat(initialData.fat || '');
+        setFiber(initialData.fiber || '');
+        setSugar(initialData.sugar || '');
       }
     }
   }, [initialData]);
@@ -220,6 +238,12 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       })),
       instructions: validSteps,
       tags: tags,
+      calories: calories ? parseInt(calories, 10) : null,
+      protein: protein.trim() || null,
+      carbs: carbs.trim() || null,
+      fat: fat.trim() || null,
+      fiber: fiber.trim() || null,
+      sugar: sugar.trim() || null,
     };
 
     // Include source image URL from import (if no local image file was chosen)
@@ -497,6 +521,61 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
           <Plus size={16} />
           Add Step
         </Button>
+      </div>
+
+      {/* Nutrition (optional, collapsible) */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowNutrition(!showNutrition)}
+          className="flex items-center gap-2 text-sm font-semibold text-brown hover:text-terracotta transition-colors duration-200"
+        >
+          <ChevronRight size={16} className={`transition-transform duration-200 ${showNutrition ? 'rotate-90' : ''}`} />
+          Nutrition (optional)
+        </button>
+
+        {showNutrition && (
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+            <Input
+              label="Calories"
+              type="number"
+              value={calories}
+              onChange={(e) => setCalories(e.target.value)}
+              placeholder="250"
+              min="0"
+            />
+            <Input
+              label="Protein"
+              value={protein}
+              onChange={(e) => setProtein(e.target.value)}
+              placeholder="12g"
+            />
+            <Input
+              label="Carbs"
+              value={carbs}
+              onChange={(e) => setCarbs(e.target.value)}
+              placeholder="30g"
+            />
+            <Input
+              label="Fat"
+              value={fat}
+              onChange={(e) => setFat(e.target.value)}
+              placeholder="8g"
+            />
+            <Input
+              label="Fiber"
+              value={fiber}
+              onChange={(e) => setFiber(e.target.value)}
+              placeholder="4g"
+            />
+            <Input
+              label="Sugar"
+              value={sugar}
+              onChange={(e) => setSugar(e.target.value)}
+              placeholder="5g"
+            />
+          </div>
+        )}
       </div>
 
       {/* Tags */}

@@ -1,12 +1,14 @@
 import React from 'react';
 import RecipeCard from './RecipeCard';
-import Spinner from '../ui/Spinner';
+import { RecipeCardSkeleton } from '../ui/Skeleton';
 
 export default function RecipeGrid({ recipes, isLoading, hasMore, onLoadMore }) {
   if (isLoading && recipes.length === 0) {
     return (
-      <div className="flex justify-center py-12">
-        <Spinner size="lg" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <RecipeCardSkeleton key={i} />
+        ))}
       </div>
     );
   }

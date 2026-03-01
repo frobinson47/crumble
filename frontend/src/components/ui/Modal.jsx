@@ -1,12 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+  const [visible, setVisible] = useState(false);
+  const [animate, setAnimate] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
+      setVisible(true);
+      // Trigger enter animation on next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimate(true));
+      });
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+    } else if (visible) {
+      // Trigger exit animation
+      setAnimate(false);
+      const timer = setTimeout(() => {
+        setVisible(false);
+        document.body.style.overflow = '';
+      }, 200);
+      return () => clearTimeout(timer);
     }
     return () => {
       document.body.style.overflow = '';
@@ -23,7 +37,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!visible) return null;
 
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -37,7 +51,9 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-brown/50 backdrop-blur-sm"
+        className={`absolute inset-0 bg-brown/50 backdrop-blur-sm transition-opacity duration-200 ${
+          animate ? 'opacity-100' : 'opacity-0'
+        }`}
         onClick={onClose}
       />
       {/* Modal content */}
@@ -47,6 +63,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
           w-full ${sizeClasses[size] || sizeClasses.md}
           max-h-[90vh] overflow-y-auto
           p-6
+          transition-all duration-200
+          ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
         `}
       >
         <div className="flex items-center justify-between mb-4">

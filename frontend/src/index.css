@@ -14,6 +14,7 @@
   --color-warm-gray: #8D7B6E;
   --font-family-display: 'Nunito', sans-serif;
   --font-family-body: 'Nunito', sans-serif;
+  --font-family-serif: 'Playfair Display', Georgia, serif;
 }
 
 /* Base styles */
@@ -41,6 +42,15 @@ body {
 .auto-expand {
   field-sizing: content;
   min-height: 2.5rem;
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Strikethrough animation for grocery items */

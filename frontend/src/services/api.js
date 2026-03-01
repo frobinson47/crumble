@@ -150,6 +150,38 @@ export function addRecipeToGrocery(listId, recipeId) {
   return request(`/grocery/${listId}/recipes/${recipeId}`, { method: 'POST' });
 }
 
+// Favorites
+export function toggleFavorite(recipeId) {
+  return request(`/recipes/${recipeId}/favorite`, { method: 'POST' });
+}
+
+export function getFavorites() {
+  return request('/favorites');
+}
+
+// Ratings
+export function rateRecipe(recipeId, score) {
+  return request(`/recipes/${recipeId}/rate`, { method: 'POST', body: { score } });
+}
+
+// Cook Log
+export function logCook(recipeId, notes = null) {
+  return request(`/recipes/${recipeId}/cook`, { method: 'POST', body: { notes } });
+}
+
+export function getCookLog() {
+  return request('/cook-log');
+}
+
+// Featured & Related
+export function getFeaturedRecipe() {
+  return request('/recipes/featured');
+}
+
+export function getRelatedRecipes(recipeId) {
+  return request(`/recipes/${recipeId}/related`);
+}
+
 // Users (admin)
 export function getUsers() {
   return request('/users');

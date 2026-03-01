@@ -45,11 +45,15 @@ class Recipe {
 
         // Fetch page
         $offset = ($page - 1) * $perPage;
+        $userId = $_SESSION['user_id'] ?? null;
+
         $sql = "
             SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
                    r.image_path, r.created_at, r.updated_at, r.created_by,
                    u.username AS author,
-                   (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id = r.id) AS ingredient_count
+                   (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id = r.id) AS ingredient_count,
+                   (SELECT ROUND(AVG(rt.score), 1) FROM ratings rt WHERE rt.recipe_id = r.id) AS avg_rating,
+                   (SELECT COUNT(*) FROM favorites f WHERE f.recipe_id = r.id) AS favorite_count
             FROM recipes r
             LEFT JOIN users u ON r.created_by = u.id
             $whereClause
@@ -84,8 +88,19 @@ class Recipe {
                 ];
             }
 
+            // Add user-specific favorite status
+            if ($userId) {
+                $favSql = "SELECT recipe_id FROM favorites WHERE user_id = ? AND recipe_id IN ($placeholders)";
+                $favStmt = $this->db->prepare($favSql);
+                $favStmt->execute(array_merge([$userId], $ids));
+                $favSet = array_flip(array_column($favStmt->fetchAll(), 'recipe_id'));
+            }
+
             foreach ($recipes as &$recipe) {
                 $recipe['tags'] = $tagMap[$recipe['id']] ?? [];
+                $recipe['is_favorited'] = isset($favSet[$recipe['id']]);
+                $recipe['avg_rating'] = $recipe['avg_rating'] !== null ? (float) $recipe['avg_rating'] : null;
+                $recipe['favorite_count'] = (int) $recipe['favorite_count'];
             }
             unset($recipe);
         }
@@ -142,6 +157,37 @@ class Recipe {
         $tagStmt->execute([$id]);
         $recipe['tags'] = $tagStmt->fetchAll();
 
+        // Get aggregates: avg rating, favorite count, cook count
+        $ratingStmt = $this->db->prepare('SELECT ROUND(AVG(score), 1) FROM ratings WHERE recipe_id = ?');
+        $ratingStmt->execute([$id]);
+        $avgRating = $ratingStmt->fetchColumn();
+        $recipe['avg_rating'] = $avgRating !== false && $avgRating !== null ? (float) $avgRating : null;
+
+        $favCountStmt = $this->db->prepare('SELECT COUNT(*) FROM favorites WHERE recipe_id = ?');
+        $favCountStmt->execute([$id]);
+        $recipe['favorite_count'] = (int) $favCountStmt->fetchColumn();
+
+        // User-specific data
+        $userId = $_SESSION['user_id'] ?? null;
+        if ($userId) {
+            $favStmt = $this->db->prepare('SELECT 1 FROM favorites WHERE user_id = ? AND recipe_id = ?');
+            $favStmt->execute([$userId, $id]);
+            $recipe['is_favorited'] = (bool) $favStmt->fetch();
+
+            $userRatingStmt = $this->db->prepare('SELECT score FROM ratings WHERE user_id = ? AND recipe_id = ?');
+            $userRatingStmt->execute([$userId, $id]);
+            $ur = $userRatingStmt->fetchColumn();
+            $recipe['user_rating'] = $ur !== false ? (int) $ur : null;
+
+            $cookCountStmt = $this->db->prepare('SELECT COUNT(*) FROM cook_log WHERE user_id = ? AND recipe_id = ?');
+            $cookCountStmt->execute([$userId, $id]);
+            $recipe['cook_count'] = (int) $cookCountStmt->fetchColumn();
+        } else {
+            $recipe['is_favorited'] = false;
+            $recipe['user_rating'] = null;
+            $recipe['cook_count'] = 0;
+        }
+
         // Get prev/next recipe IDs for navigation
         $prevStmt = $this->db->prepare('SELECT id FROM recipes WHERE id < ? ORDER BY id DESC LIMIT 1');
         $prevStmt->execute([$id]);
@@ -168,8 +214,8 @@ class Recipe {
         try {
             // Insert recipe
             $stmt = $this->db->prepare('
-                INSERT INTO recipes (title, description, prep_time, cook_time, servings, source_url, image_path, instructions, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO recipes (title, description, prep_time, cook_time, servings, source_url, image_path, instructions, created_by, calories, protein, carbs, fat, fiber, sugar)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $instructions = is_array($data['instructions'] ?? null) ? json_encode($data['instructions']) : ($data['instructions'] ?? '[]');
             $stmt->execute([
@@ -182,6 +228,12 @@ class Recipe {
                 $data['image_path'] ?? null,
                 $instructions,
                 $userId,
+                $data['calories'] ?? null,
+                $data['protein'] ?? null,
+                $data['carbs'] ?? null,
+                $data['fat'] ?? null,
+                $data['fiber'] ?? null,
+                $data['sugar'] ?? null,
             ]);
             $recipeId = (int) $this->db->lastInsertId();
 
@@ -240,7 +292,7 @@ class Recipe {
 
         try {
             // Build dynamic UPDATE for recipe fields
-            $allowed = ['title', 'description', 'prep_time', 'cook_time', 'servings', 'source_url', 'image_path'];
+            $allowed = ['title', 'description', 'prep_time', 'cook_time', 'servings', 'source_url', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar'];
             $sets = [];
             $values = [];
 
@@ -348,6 +400,62 @@ class Recipe {
         }
 
         return $deleted;
+    }
+
+    /**
+     * Get a featured recipe (highest rated with image, or most recent with image).
+     */
+    public function getFeatured(): ?array {
+        // Try highest rated with image first
+        $stmt = $this->db->prepare('
+            SELECT r.id, r.title, r.description, r.image_path, r.prep_time, r.cook_time, r.servings,
+                   ROUND(AVG(rt.score), 1) AS avg_rating
+            FROM recipes r
+            INNER JOIN ratings rt ON rt.recipe_id = r.id
+            WHERE r.image_path IS NOT NULL AND r.image_path != ""
+            GROUP BY r.id
+            ORDER BY avg_rating DESC, r.created_at DESC
+            LIMIT 1
+        ');
+        $stmt->execute();
+        $recipe = $stmt->fetch();
+
+        if (!$recipe) {
+            // Fallback: most recent with image
+            $stmt = $this->db->prepare('
+                SELECT id, title, description, image_path, prep_time, cook_time, servings
+                FROM recipes
+                WHERE image_path IS NOT NULL AND image_path != ""
+                ORDER BY created_at DESC
+                LIMIT 1
+            ');
+            $stmt->execute();
+            $recipe = $stmt->fetch();
+        }
+
+        return $recipe ?: null;
+    }
+
+    /**
+     * Get related recipes by shared tags.
+     */
+    public function getRelated(int $recipeId, int $limit = 4): array {
+        $stmt = $this->db->prepare('
+            SELECT DISTINCT r.id, r.title, r.image_path, r.prep_time, r.cook_time, r.servings,
+                   COUNT(rt2.tag_id) AS shared_tags,
+                   (SELECT ROUND(AVG(score), 1) FROM ratings WHERE recipe_id = r.id) AS avg_rating
+            FROM recipes r
+            INNER JOIN recipe_tags rt2 ON rt2.recipe_id = r.id
+            WHERE rt2.tag_id IN (
+                SELECT tag_id FROM recipe_tags WHERE recipe_id = ?
+            )
+            AND r.id != ?
+            GROUP BY r.id
+            ORDER BY shared_tags DESC, r.created_at DESC
+            LIMIT ?
+        ');
+        $stmt->execute([$recipeId, $recipeId, $limit]);
+        return $stmt->fetchAll();
     }
 
     /**
