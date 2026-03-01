@@ -12,4 +12,25 @@ class TagController {
         $tagModel = new Tag();
         return $tagModel->getAllWithCounts();
     }
+
+    /**
+     * DELETE /tags/{id}
+     * Deletes a tag (requires login).
+     */
+    public function delete(int $id): array {
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            return ['error' => 'Unauthorized', 'code' => 401];
+        }
+
+        $tagModel = new Tag();
+        $deleted = $tagModel->delete($id);
+
+        if (!$deleted) {
+            http_response_code(404);
+            return ['error' => 'Tag not found', 'code' => 404];
+        }
+
+        return ['success' => true];
+    }
 }

@@ -97,6 +97,10 @@ export function getTags() {
   return request('/tags');
 }
 
+export function deleteTag(id) {
+  return request(`/tags/${id}`, { method: 'DELETE' });
+}
+
 // Grocery Lists
 export function getGroceryLists() {
   return request('/grocery');

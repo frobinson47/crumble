@@ -5,10 +5,12 @@ import RecipeGrid from '../components/recipe/RecipeGrid';
 import TagBadge from '../components/ui/TagBadge';
 import Spinner from '../components/ui/Spinner';
 import useRecipes from '../hooks/useRecipes';
+import { useAuth } from '../hooks/useAuth';
 import * as api from '../services/api';
 
 export default function HomePage({ searchQuery = '' }) {
   const { recipes, pagination, isLoading, fetchRecipes } = useRecipes();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery || searchParams.get('search') || '');
   const [activeTag, setActiveTag] = useState(searchParams.get('tag') || '');
@@ -60,6 +62,17 @@ export default function HomePage({ searchQuery = '' }) {
     setActiveTag(newTag);
   };
 
+  const handleDeleteTag = async (tag) => {
+    if (!window.confirm(`Delete tag "${tag.name}"? It will be removed from all recipes.`)) return;
+    try {
+      await api.deleteTag(tag.id);
+      setTags(prev => prev.filter(t => t.id !== tag.id));
+      if (activeTag === tag.name) setActiveTag('');
+    } catch {
+      // Silently fail
+    }
+  };
+
   const handleLoadMore = () => {
     if (pagination.page < pagination.totalPages) {
       fetchRecipes({
@@ -108,6 +121,7 @@ export default function HomePage({ searchQuery = '' }) {
               tag={tag.name || tag}
               isActive={activeTag === (tag.name || tag)}
               onClick={() => handleTagClick(tag.name || tag)}
+              onRemove={user ? () => handleDeleteTag(tag) : undefined}
             />
           ))}
         </div>

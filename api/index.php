@@ -139,8 +139,10 @@ try {
             require_once __DIR__ . '/controllers/TagController.php';
             $controller = new TagController();
 
-            if ($method === 'GET') {
+            if ($id === null && $method === 'GET') {
                 $response = $controller->list();
+            } elseif (is_numeric($id) && $method === 'DELETE') {
+                $response = $controller->delete((int) $id);
             }
             break;
 
