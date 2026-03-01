@@ -5,6 +5,12 @@ require_once __DIR__ . '/IngredientParser.php';
 class MealieImporter {
 
     public function import(string $zipPath): array {
+        if (!class_exists('ZipArchive')) {
+            return ['results' => [
+                ['status' => 'error', 'error_message' => 'ZIP support is not available. Enable the PHP zip extension.']
+            ]];
+        }
+
         $zip = new ZipArchive();
 
         if ($zip->open($zipPath) !== true) {

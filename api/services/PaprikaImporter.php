@@ -6,6 +6,12 @@ class PaprikaImporter
 {
     public function import(string $filePath): array
     {
+        if (!class_exists('ZipArchive')) {
+            return ['results' => [
+                ['status' => 'error', 'error_message' => 'ZIP support is not available. Enable the PHP zip extension.'],
+            ]];
+        }
+
         $results = [];
 
         $zip = new ZipArchive();

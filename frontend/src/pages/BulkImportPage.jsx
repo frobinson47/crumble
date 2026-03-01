@@ -11,9 +11,9 @@ function formatRecipeData(parsed) {
   return {
     title: parsed.title || '',
     description: parsed.description || '',
-    prep_time: parsed.prepTime || parsed.prep_time || '',
-    cook_time: parsed.cookTime || parsed.cook_time || '',
-    servings: parsed.servings || '',
+    prep_time: parsed.prepTime || parsed.prep_time || null,
+    cook_time: parsed.cookTime || parsed.cook_time || null,
+    servings: parsed.servings || null,
     source_url: parsed.sourceUrl || parsed.source_url || '',
     source_image_url: parsed.image_url || parsed.imageUrl || '',
     ingredients: (parsed.ingredients || []).map((ing, i) => {
