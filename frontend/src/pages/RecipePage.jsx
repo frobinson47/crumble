@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  Clock, Users, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
+  Clock, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
   ArrowLeft, Plus
 } from 'lucide-react';
 import useRecipes from '../hooks/useRecipes';
@@ -15,6 +15,8 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Spinner from '../components/ui/Spinner';
 import Input from '../components/ui/Input';
+import ServingsAdjuster from '../components/ui/ServingsAdjuster';
+import { scaleIngredients } from '../utils/ingredientScaling';
 
 export default function RecipePage() {
   const { id } = useParams();
@@ -28,10 +30,18 @@ export default function RecipePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [groceryLoading, setGroceryLoading] = useState(false);
+  const [adjustedServings, setAdjustedServings] = useState(null);
 
   useEffect(() => {
     fetchRecipe(id);
   }, [id, fetchRecipe]);
+
+  // Sync adjustedServings when recipe loads or changes
+  useEffect(() => {
+    if (recipe?.servings) {
+      setAdjustedServings(recipe.servings);
+    }
+  }, [recipe?.servings]);
 
   useEffect(() => {
     if (showGroceryModal) {
@@ -103,13 +113,19 @@ export default function RecipePage() {
       ? JSON.parse(recipe.instructions)
       : [];
 
+  const scaledIngredients = scaleIngredients(
+    recipe.ingredients || [],
+    recipe.servings,
+    adjustedServings
+  );
+
   return (
     <div>
       {/* Cook Mode overlay */}
       {cookMode && (
         <CookMode
           steps={instructions}
-          ingredients={recipe.ingredients || []}
+          ingredients={scaledIngredients}
           onClose={() => setCookMode(false)}
         />
       )}
@@ -193,13 +209,11 @@ export default function RecipePage() {
             <span className="text-sm font-semibold">Total: {totalTime} min</span>
           </div>
         )}
-        {recipe.servings && (
-          <div className="flex items-center gap-1.5 text-brown-light">
-            <Users size={18} className="text-sage" />
-            <span className="text-sm">
-              <span className="font-semibold">Servings:</span> {recipe.servings}
-            </span>
-          </div>
+        {recipe.servings && adjustedServings && (
+          <ServingsAdjuster
+            servings={adjustedServings}
+            onChange={setAdjustedServings}
+          />
         )}
       </div>
 
@@ -250,7 +264,7 @@ export default function RecipePage() {
         <div className="md:sticky md:top-20 md:self-start">
           <div className="bg-white rounded-2xl shadow-md p-6">
             <h2 className="text-xl font-bold text-brown mb-4">Ingredients</h2>
-            <IngredientList ingredients={recipe.ingredients || []} />
+            <IngredientList ingredients={scaledIngredients} />
           </div>
         </div>
 
