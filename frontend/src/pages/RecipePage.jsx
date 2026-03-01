@@ -14,10 +14,18 @@ import TagBadge from '../components/ui/TagBadge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Spinner from '../components/ui/Spinner';
+import { RecipeDetailSkeleton } from '../components/ui/Skeleton';
 import Input from '../components/ui/Input';
 import ServingsAdjuster from '../components/ui/ServingsAdjuster';
 import { scaleIngredients } from '../utils/ingredientScaling';
 import { generateRecipeCard, recipeToText } from '../utils/recipeCardGenerator';
+import StarRating from '../components/ui/StarRating';
+import FavoriteButton from '../components/recipe/FavoriteButton';
+import CookButton from '../components/recipe/CookButton';
+import * as api from '../services/api';
+import RelatedRecipes from '../components/recipe/RelatedRecipes';
+import NutritionFacts from '../components/recipe/NutritionFacts';
+import useRecentlyViewed from '../hooks/useRecentlyViewed';
 
 export default function RecipePage() {
   const { id } = useParams();
@@ -25,6 +33,7 @@ export default function RecipePage() {
   const { user, isAdmin } = useAuth();
   const { recipe, isLoading, error, fetchRecipe, removeRecipe } = useRecipes();
   const { lists, fetchLists, createList, addRecipeToList } = useGrocery();
+  const { addRecipe: addToRecentlyViewed } = useRecentlyViewed();
 
   const [cookMode, setCookMode] = useState(false);
   const [showGroceryModal, setShowGroceryModal] = useState(false);
@@ -40,6 +49,13 @@ export default function RecipePage() {
   useEffect(() => {
     fetchRecipe(id);
   }, [id, fetchRecipe]);
+
+  // Track recently viewed
+  useEffect(() => {
+    if (recipe) {
+      addToRecentlyViewed(recipe);
+    }
+  }, [recipe?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync adjustedServings when recipe loads or changes
   useEffect(() => {
@@ -136,11 +152,7 @@ export default function RecipePage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <RecipeDetailSkeleton />;
   }
 
   if (error || !recipe) {
@@ -203,9 +215,34 @@ export default function RecipePage() {
       {/* Title and actions */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-brown mb-2">
-            {recipe.title}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-brown mb-2 font-serif">
+              {recipe.title}
+            </h1>
+            <FavoriteButton
+              recipeId={recipe.id}
+              initialFavorited={recipe.is_favorited}
+              size="lg"
+            />
+          </div>
+          {recipe.avg_rating !== null && recipe.avg_rating !== undefined && (
+            <div className="mb-2">
+              <StarRating
+                value={recipe.user_rating || recipe.avg_rating || 0}
+                onChange={(score) => api.rateRecipe(recipe.id, score)}
+                size="md"
+              />
+            </div>
+          )}
+          {!recipe.avg_rating && (
+            <div className="mb-2">
+              <StarRating
+                value={0}
+                onChange={(score) => api.rateRecipe(recipe.id, score)}
+                size="md"
+              />
+            </div>
+          )}
           {recipe.description && (
             <p className="text-brown-light text-lg leading-relaxed">
               {recipe.description}
@@ -284,6 +321,7 @@ export default function RecipePage() {
             Start Cooking
           </Button>
         )}
+        <CookButton recipeId={recipe.id} cookCount={recipe.cook_count || 0} />
         <Button
           variant="secondary"
           onClick={() => setShowGroceryModal(true)}
@@ -340,6 +378,19 @@ export default function RecipePage() {
           <StepList steps={instructions} />
         </div>
       </div>
+
+      {/* Nutrition Facts */}
+      <NutritionFacts nutrition={{
+        calories: recipe.calories,
+        protein: recipe.protein,
+        carbs: recipe.carbs,
+        fat: recipe.fat,
+        fiber: recipe.fiber,
+        sugar: recipe.sugar,
+      }} />
+
+      {/* Related Recipes */}
+      <RelatedRecipes recipeId={recipe.id} />
 
       {/* Delete confirmation modal */}
       <Modal

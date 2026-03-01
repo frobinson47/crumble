@@ -117,26 +117,64 @@ try {
                         $response = $controller->create();
                         break;
                 }
+            } elseif ($id === 'featured' && $method === 'GET') {
+                $response = $controller->featured();
             } elseif (is_numeric($id)) {
-                // /recipes/{id}
                 $recipeId = (int) $id;
-                switch ($method) {
-                    case 'GET':
-                        $response = $controller->get($recipeId);
-                        break;
-                    case 'PUT':
-                    case 'POST':
-                        // Accept POST for multipart updates (PUT with files is problematic)
-                        if ($method === 'PUT' || ($method === 'POST' && isset($_GET['_method']) && $_GET['_method'] === 'PUT')) {
+
+                if ($subResource === 'favorite' && $method === 'POST') {
+                    // /recipes/{id}/favorite
+                    require_once __DIR__ . '/controllers/FavoriteController.php';
+                    $favController = new FavoriteController();
+                    $response = $favController->toggle($recipeId);
+                } elseif ($subResource === 'rate' && $method === 'POST') {
+                    // /recipes/{id}/rate
+                    require_once __DIR__ . '/controllers/RatingController.php';
+                    $rateController = new RatingController();
+                    $response = $rateController->rate($recipeId);
+                } elseif ($subResource === 'cook' && $method === 'POST') {
+                    // /recipes/{id}/cook
+                    require_once __DIR__ . '/controllers/CookLogController.php';
+                    $cookController = new CookLogController();
+                    $response = $cookController->log($recipeId);
+                } elseif ($subResource === 'related' && $method === 'GET') {
+                    // /recipes/{id}/related
+                    $response = $controller->related($recipeId);
+                } elseif ($subResource === null) {
+                    // /recipes/{id}
+                    switch ($method) {
+                        case 'GET':
+                            $response = $controller->get($recipeId);
+                            break;
+                        case 'PUT':
+                        case 'POST':
                             $response = $controller->update($recipeId);
-                        } elseif ($method === 'POST') {
-                            $response = $controller->update($recipeId);
-                        }
-                        break;
-                    case 'DELETE':
-                        $response = $controller->delete($recipeId);
-                        break;
+                            break;
+                        case 'DELETE':
+                            $response = $controller->delete($recipeId);
+                            break;
+                    }
                 }
+            }
+            break;
+
+        // ── Favorites Routes ──────────────────────────────────────────
+        case 'favorites':
+            require_once __DIR__ . '/controllers/FavoriteController.php';
+            $favController = new FavoriteController();
+
+            if ($id === null && $method === 'GET') {
+                $response = $favController->list();
+            }
+            break;
+
+        // ── Cook Log Routes ──────────────────────────────────────────
+        case 'cook-log':
+            require_once __DIR__ . '/controllers/CookLogController.php';
+            $cookController = new CookLogController();
+
+            if ($id === null && $method === 'GET') {
+                $response = $cookController->history();
             }
             break;
 

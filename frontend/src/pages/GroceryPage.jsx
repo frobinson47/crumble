@@ -7,6 +7,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import Spinner from '../components/ui/Spinner';
+import { Skeleton, GroceryListSkeleton } from '../components/ui/Skeleton';
 
 export default function GroceryPage() {
   const {
@@ -92,8 +93,8 @@ export default function GroceryPage() {
         {/* Items */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
           {isLoading && sortedItems.length === 0 ? (
-            <div className="p-6 flex justify-center">
-              <Spinner />
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
             </div>
           ) : sortedItems.length === 0 ? (
             <div className="p-8 text-center">
@@ -145,9 +146,7 @@ export default function GroceryPage() {
       </div>
 
       {isLoading && lists.length === 0 ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
+        <GroceryListSkeleton />
       ) : lists.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl shadow-md">
           <ShoppingCart size={48} className="mx-auto text-warm-gray mb-3" />

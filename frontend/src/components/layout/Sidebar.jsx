@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload } from 'lucide-react';
+import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Sidebar() {
@@ -11,6 +11,7 @@ export default function Sidebar() {
     { to: '/add', icon: Plus, label: 'Add Recipe' },
     { to: '/bulk-import', icon: Upload, label: 'Bulk Import' },
     { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
+    { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
   ];
 
   if (isAdmin) {
