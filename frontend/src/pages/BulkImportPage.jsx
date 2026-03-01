@@ -29,6 +29,7 @@ function formatRecipeData(parsed) {
     }),
     instructions: parsed.instructions || [],
     tags: parsed.tags || [],
+    _image_token: parsed._image_token || undefined,
   };
 }
 

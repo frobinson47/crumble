@@ -83,6 +83,23 @@ class RecipeController {
             if ($imagePath) {
                 $recipe = $recipeModel->update($recipe['id'], ['image_path' => $imagePath]);
             }
+        } elseif (!empty($data['_image_token']) && !empty($_SESSION['mealie_images'][$data['_image_token']])) {
+            // Process image from Mealie/Paprika import temp file
+            $tmpFile = $_SESSION['mealie_images'][$data['_image_token']];
+            if (file_exists($tmpFile)) {
+                $imageProcessor = new ImageProcessor();
+                $fakeFile = [
+                    'tmp_name' => $tmpFile,
+                    'error' => UPLOAD_ERR_OK,
+                    'size' => filesize($tmpFile),
+                ];
+                $imagePath = $imageProcessor->process($fakeFile, $recipe['id']);
+                @unlink($tmpFile);
+                if ($imagePath) {
+                    $recipe = $recipeModel->update($recipe['id'], ['image_path' => $imagePath]);
+                }
+            }
+            unset($_SESSION['mealie_images'][$data['_image_token']]);
         } elseif (!empty($data['source_image_url'])) {
             // Download image from URL (e.g., from imported recipe)
             $imageProcessor = new ImageProcessor();

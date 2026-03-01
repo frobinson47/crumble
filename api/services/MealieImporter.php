@@ -65,6 +65,26 @@ class MealieImporter {
                     $instructionsByRecipe[$rid] ?? [],
                     $parser
                 );
+
+                // Extract image from zip and store in session for later save
+                $uuid = substr($rid, 0, 8) . '-' . substr($rid, 8, 4) . '-' .
+                        substr($rid, 12, 4) . '-' . substr($rid, 16, 4) . '-' .
+                        substr($rid, 20);
+                $imagePath = "data/recipes/{$uuid}/images/original.webp";
+                $imageData = $zip->getFromName($imagePath);
+                if ($imageData !== false) {
+                    // Save to temp file and track by a token
+                    $token = bin2hex(random_bytes(16));
+                    $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "mealie_img_{$token}.webp";
+                    file_put_contents($tmpFile, $imageData);
+                    $mapped['_image_token'] = $token;
+                    // Store token->path mapping in session
+                    if (!isset($_SESSION['mealie_images'])) {
+                        $_SESSION['mealie_images'] = [];
+                    }
+                    $_SESSION['mealie_images'][$token] = $tmpFile;
+                }
+
                 $results[] = [
                     'status' => 'success',
                     'recipe' => $mapped,
