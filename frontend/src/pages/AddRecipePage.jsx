@@ -27,6 +27,12 @@ export default function AddRecipePage() {
 
   const handleImportSuccess = (data) => {
     const parsed = data.recipe || data;
+
+    // API returned an error with no useful data (e.g. fetch_blocked)
+    if (parsed.error && !parsed.title) {
+      throw new Error(parsed.error);
+    }
+
     setImportedData({
       title: parsed.title || '',
       description: parsed.description || '',
