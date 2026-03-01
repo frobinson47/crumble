@@ -20,7 +20,7 @@ export function useRecipes() {
       }
       setPagination({
         page: data.page || 1,
-        totalPages: data.totalPages || 1,
+        totalPages: data.totalPages || data.total_pages || 1,
         total: data.total || 0,
       });
     } catch (err) {

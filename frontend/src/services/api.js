@@ -53,7 +53,7 @@ export function getMe() {
 export function getRecipes(params = {}) {
   const query = new URLSearchParams();
   if (params.page) query.set('page', params.page);
-  if (params.perPage) query.set('perPage', params.perPage);
+  if (params.perPage) query.set('per_page', params.perPage);
   if (params.search) query.set('search', params.search);
   if (params.tag) query.set('tag', params.tag);
   const qs = query.toString();
