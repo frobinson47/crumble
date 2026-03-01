@@ -1,11 +1,11 @@
 import React from 'react';
 
 const variants = {
-  primary: 'bg-terracotta text-white hover:bg-terracotta-dark focus:ring-terracotta',
-  secondary: 'bg-sage text-white hover:bg-sage-dark focus:ring-sage',
+  primary: 'border-2 border-transparent bg-terracotta text-white hover:bg-terracotta-dark focus:ring-terracotta',
+  secondary: 'border-2 border-transparent bg-sage text-white hover:bg-sage-dark focus:ring-sage',
   outline: 'border-2 border-terracotta text-terracotta hover:bg-terracotta hover:text-white focus:ring-terracotta',
-  ghost: 'text-brown-light hover:bg-cream-dark focus:ring-brown-light',
-  danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+  ghost: 'border-2 border-transparent text-brown-light hover:bg-cream-dark focus:ring-brown-light',
+  danger: 'border-2 border-transparent bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
 };
 
 const sizes = {
