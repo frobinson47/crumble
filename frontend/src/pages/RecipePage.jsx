@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Clock, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
-  ArrowLeft, Plus, Printer
+  ArrowLeft, Plus, Printer, Share2, Mail
 } from 'lucide-react';
 import useRecipes from '../hooks/useRecipes';
 import { useAuth } from '../hooks/useAuth';
@@ -31,6 +31,8 @@ export default function RecipePage() {
   const [newListName, setNewListName] = useState('');
   const [groceryLoading, setGroceryLoading] = useState(false);
   const [adjustedServings, setAdjustedServings] = useState(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const shareRef = useRef(null);
 
   useEffect(() => {
     fetchRecipe(id);
@@ -42,6 +44,18 @@ export default function RecipePage() {
       setAdjustedServings(recipe.servings);
     }
   }, [recipe?.servings]);
+
+  // Close share menu on outside click
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const handleClick = (e) => {
+      if (shareRef.current && !shareRef.current.contains(e.target)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showShareMenu]);
 
   useEffect(() => {
     if (showGroceryModal) {
@@ -249,6 +263,47 @@ export default function RecipePage() {
           <Printer size={18} />
           Print
         </Button>
+        <div className="relative print:hidden" ref={shareRef}>
+          <Button
+            variant="outline"
+            onClick={() => setShowShareMenu(prev => !prev)}
+          >
+            <Share2 size={18} />
+            Share
+          </Button>
+          {showShareMenu && (
+            <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-cream-dark py-1 z-30">
+              <a
+                href={`mailto:?subject=${encodeURIComponent(recipe.title)}&body=${encodeURIComponent(`Check out this recipe: ${recipe.title}\n\n${window.location.href}`)}`}
+                className="flex items-center gap-3 px-4 py-2.5 text-brown-light hover:bg-cream-dark transition-colors text-sm min-h-[44px]"
+                onClick={() => setShowShareMenu(false)}
+              >
+                <Mail size={16} className="text-terracotta" />
+                Email
+              </a>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-2.5 text-brown-light hover:bg-cream-dark transition-colors text-sm min-h-[44px]"
+                onClick={() => setShowShareMenu(false)}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" className="fill-[#1877F2]"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+                Facebook
+              </a>
+              <a
+                href={`https://x.com/intent/tweet?text=${encodeURIComponent(recipe.title)}&url=${encodeURIComponent(window.location.href)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-2.5 text-brown-light hover:bg-cream-dark transition-colors text-sm min-h-[44px]"
+                onClick={() => setShowShareMenu(false)}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" className="fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                X (Twitter)
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Source URL */}
