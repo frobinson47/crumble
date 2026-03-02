@@ -12,6 +12,7 @@ import GroceryPage from './pages/GroceryPage';
 import AdminPage from './pages/AdminPage';
 import BulkImportPage from './pages/BulkImportPage';
 import CookHistoryPage from './pages/CookHistoryPage';
+import FavoritesPage from './pages/FavoritesPage';
 
 export default function App() {
   return (
@@ -78,6 +79,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <GroceryPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <FavoritesPage />
                 </Layout>
               </ProtectedRoute>
             }

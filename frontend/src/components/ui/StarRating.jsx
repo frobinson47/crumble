@@ -25,7 +25,7 @@ export default function StarRating({ value = 0, onChange = null, size = 'md', co
             className={`
               ${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
               transition-transform duration-150 p-0
-              ${filled || halfFilled ? 'text-amber-400' : 'text-warm-gray/30'}
+              ${filled || halfFilled ? 'text-amber-400' : 'text-warm-gray/60'}
             `}
             style={{ background: 'none', border: 'none', minWidth: 'auto', minHeight: 'auto' }}
             aria-label={`${star} star${star !== 1 ? 's' : ''}`}

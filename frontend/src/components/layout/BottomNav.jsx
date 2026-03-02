@@ -1,11 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Upload } from 'lucide-react';
+import { LayoutGrid, Plus, Heart, ShoppingCart, User } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutGrid, label: 'Home' },
   { to: '/add', icon: Plus, label: 'Add' },
-  { to: '/bulk-import', icon: Upload, label: 'Import' },
+  { to: '/favorites', icon: Heart, label: 'Favorites' },
   { to: '/grocery', icon: ShoppingCart, label: 'Grocery' },
   { to: '/admin', icon: User, label: 'Profile' },
 ];

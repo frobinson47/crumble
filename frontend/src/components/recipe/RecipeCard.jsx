@@ -54,11 +54,9 @@ export default function RecipeCard({ recipe }) {
         </h3>
 
         {/* Star rating */}
-        {recipe.avg_rating && (
-          <div className="mb-2">
-            <StarRating value={recipe.avg_rating} size="sm" />
-          </div>
-        )}
+        <div className="mb-2">
+          <StarRating value={recipe.avg_rating || 0} size="sm" />
+        </div>
 
         {/* Metadata */}
         <div className="flex items-center gap-4 text-sm text-warm-gray mb-3">

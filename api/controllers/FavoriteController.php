@@ -13,6 +13,6 @@ class FavoriteController {
     public function list(): array {
         $userId = Auth::requireAuth();
         $model = new Favorite();
-        return ['favorites' => $model->getByUser($userId)];
+        return ['recipes' => $model->getByUserWithRecipes($userId)];
     }
 }
