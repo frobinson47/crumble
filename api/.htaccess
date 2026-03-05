@@ -1,4 +1,23 @@
 RewriteEngine On
+
+# Block access to sensitive files
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^composer\.(json|lock)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^phpunit\.xml$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^install\.php">
+    Require all denied
+</FilesMatch>
+
+# Route all other requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]

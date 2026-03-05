@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../middleware/Csrf.php';
 
 class AuthController {
 
@@ -19,10 +20,23 @@ class AuthController {
         $userModel = new User();
         $user = $userModel->findByUsername($input['username']);
 
+        // Check account lockout
+        if ($user && $userModel->isLocked($user['id'])) {
+            http_response_code(423);
+            return ['error' => 'Account is temporarily locked. Try again later.', 'code' => 423];
+        }
+
         if (!$user || !$userModel->verifyPassword($input['password'], $user['password_hash'])) {
+            if ($user) {
+                $userModel->recordFailedAttempt($user['id']);
+            }
             http_response_code(401);
             return ['error' => 'Invalid username or password', 'code' => 401];
         }
+
+        // Successful login — reset failed attempts and regenerate session
+        $userModel->resetFailedAttempts($user['id']);
+        session_regenerate_id(true);
 
         // Start session and store user info
         $_SESSION['user_id'] = (int) $user['id'];
@@ -68,6 +82,7 @@ class AuthController {
             return ['error' => 'User not found', 'code' => 401];
         }
 
+        $user['csrf_token'] = Csrf::generateToken();
         return $user;
     }
 }

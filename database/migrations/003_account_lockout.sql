@@ -1,0 +1,3 @@
+ALTER TABLE users
+  ADD COLUMN failed_attempts INT NOT NULL DEFAULT 0 AFTER role,
+  ADD COLUMN locked_until TIMESTAMP NULL DEFAULT NULL AFTER failed_attempts;

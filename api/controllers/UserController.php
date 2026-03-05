@@ -35,6 +35,14 @@ class UserController {
             return ['error' => 'Role must be admin or member', 'code' => 400];
         }
 
+        require_once __DIR__ . '/../services/PasswordValidator.php';
+        $validator = new PasswordValidator();
+        $passwordResult = $validator->validate($input['password']);
+        if (!$passwordResult['valid']) {
+            http_response_code(400);
+            return ['error' => implode('. ', $passwordResult['errors']), 'code' => 400];
+        }
+
         $userModel = new User();
 
         // Check if username already exists
@@ -61,6 +69,14 @@ class UserController {
         if (empty($input['password'])) {
             http_response_code(400);
             return ['error' => 'New password is required', 'code' => 400];
+        }
+
+        require_once __DIR__ . '/../services/PasswordValidator.php';
+        $validator = new PasswordValidator();
+        $passwordResult = $validator->validate($input['password']);
+        if (!$passwordResult['valid']) {
+            http_response_code(400);
+            return ['error' => implode('. ', $passwordResult['errors']), 'code' => 400];
         }
 
         $userModel = new User();

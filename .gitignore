@@ -2,5 +2,7 @@ node_modules/
 frontend/dist/
 uploads/recipes/*
 !uploads/recipes/.gitkeep
-api/config/database.php
+api/.env
+api/vendor/
 .env
+docs/plans/

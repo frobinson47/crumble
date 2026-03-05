@@ -7,17 +7,28 @@
  * Handles CORS, sessions, JSON responses, and error catching.
  */
 
+// ─── Security Defaults ─────────────────────────────────────────────────────
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+error_reporting(E_ALL);
+
+// ─── Environment ────────────────────────────────────────────────────────────
+require_once __DIR__ . '/config/env.php';
+$envPath = __DIR__ . '/.env';
+if (file_exists($envPath)) {
+    loadEnv($envPath);
+}
+
 // ─── CORS Headers ───────────────────────────────────────────────────────────
-// Allow both dev (Vite) and production (Caddy) origins
-$allowedOrigins = ['http://localhost:5176', 'http://crumble.fmr.local'];
+$allowedOrigins = array_filter(array_map('trim', explode(',', env('CORS_ORIGINS', 'http://localhost:5176'))));
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins)) {
     header("Access-Control-Allow-Origin: $origin");
-} else {
-    header('Access-Control-Allow-Origin: http://localhost:5176');
+} elseif (!empty($allowedOrigins)) {
+    header('Access-Control-Allow-Origin: ' . $allowedOrigins[0]);
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With, X-CSRF-Token');
 header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json; charset=utf-8');
 
@@ -28,15 +39,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ─── Session ────────────────────────────────────────────────────────────────
-session_set_cookie_params([
-    'samesite' => 'Lax',
-    'httponly' => true,
-    'path' => '/',
-]);
+ini_set('session.gc_maxlifetime', (string) getSessionLifetime());
+session_set_cookie_params(getSessionCookieParams());
 session_start();
+
+// Check session expiration
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > getSessionLifetime()) {
+    session_unset();
+    session_destroy();
+    session_start();
+}
+$_SESSION['last_activity'] = time();
 
 // ─── Load Config ────────────────────────────────────────────────────────────
 require_once __DIR__ . '/config/constants.php';
+require_once __DIR__ . '/middleware/RateLimiter.php';
+require_once __DIR__ . '/middleware/Csrf.php';
 
 // ─── Parse Request ──────────────────────────────────────────────────────────
 $requestUri = $_SERVER['REQUEST_URI'];
@@ -68,6 +86,12 @@ try {
     $subResource = $segments[2] ?? null;
     $subId = $segments[3] ?? null;
 
+    // ── CSRF Protection (exempt login — user has no session yet) ────────
+    $csrfExempt = ($resource === 'auth' && $id === 'login');
+    if (!$csrfExempt) {
+        Csrf::enforce();
+    }
+
     switch ($resource) {
 
         // ── Auth Routes ─────────────────────────────────────────────────
@@ -78,6 +102,19 @@ try {
             switch ($id) {
                 case 'login':
                     if ($method === 'POST') {
+                        $rateLimiter = new RateLimiter();
+                        $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+                        $rateResult = $rateLimiter->check($clientIp, 'login', 5, 300);
+                        if (!$rateResult['allowed']) {
+                            http_response_code(429);
+                            header('Retry-After: ' . $rateResult['retryAfter']);
+                            $response = [
+                                'error' => 'Too many login attempts. Try again later.',
+                                'code' => 429,
+                                'retryAfter' => $rateResult['retryAfter'],
+                            ];
+                            break;
+                        }
                         $response = $controller->login();
                     }
                     break;
@@ -98,6 +135,23 @@ try {
         case 'recipes':
             require_once __DIR__ . '/controllers/RecipeController.php';
             $controller = new RecipeController();
+
+            // Rate limit all import routes
+            if (str_starts_with($id ?? '', 'import') && $method === 'POST') {
+                $rateLimiter = new RateLimiter();
+                $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+                $rateResult = $rateLimiter->check($clientIp, 'import', 10, 300);
+                if (!$rateResult['allowed']) {
+                    http_response_code(429);
+                    header('Retry-After: ' . $rateResult['retryAfter']);
+                    $response = [
+                        'error' => 'Too many import requests. Try again later.',
+                        'code' => 429,
+                        'retryAfter' => $rateResult['retryAfter'],
+                    ];
+                    break;
+                }
+            }
 
             if ($id === 'import' && $method === 'POST') {
                 $response = $controller->import();

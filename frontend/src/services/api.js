@@ -1,5 +1,7 @@
 const BASE_URL = '/api';
 
+let csrfToken = null;
+
 async function request(endpoint, options = {}) {
   const { body, method = 'GET', isFormData = false } = options;
 
@@ -8,6 +10,10 @@ async function request(endpoint, options = {}) {
     credentials: 'include',
     headers: {},
   };
+
+  if (method !== 'GET' && csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
+  }
 
   if (body && !isFormData) {
     config.headers['Content-Type'] = 'application/json';
@@ -37,16 +43,29 @@ async function request(endpoint, options = {}) {
 }
 
 // Auth
-export function login(username, password) {
-  return request('/auth/login', { method: 'POST', body: { username, password } });
+export async function login(username, password) {
+  const user = await request('/auth/login', { method: 'POST', body: { username, password } });
+  if (user && !user.error) {
+    // Fetch CSRF token after successful login
+    const me = await request('/auth/me');
+    if (me && me.csrf_token) {
+      csrfToken = me.csrf_token;
+    }
+  }
+  return user;
 }
 
 export function logout() {
   return request('/auth/logout', { method: 'POST' });
 }
 
-export function getMe() {
-  return request('/auth/me');
+export async function getMe() {
+  const user = await request('/auth/me');
+  if (user && user.csrf_token) {
+    csrfToken = user.csrf_token;
+    delete user.csrf_token;
+  }
+  return user;
 }
 
 // Recipes
