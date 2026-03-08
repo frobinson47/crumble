@@ -13,6 +13,7 @@ import AdminPage from './pages/AdminPage';
 import BulkImportPage from './pages/BulkImportPage';
 import CookHistoryPage from './pages/CookHistoryPage';
 import FavoritesPage from './pages/FavoritesPage';
+import MealPlanPage from './pages/MealPlanPage';
 
 export default function App() {
   return (
@@ -89,6 +90,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <FavoritesPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meal-plan"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MealPlanPage />
                 </Layout>
               </ProtectedRoute>
             }

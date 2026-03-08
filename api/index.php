@@ -51,6 +51,28 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) >
 }
 $_SESSION['last_activity'] = time();
 
+// ─── Authentik Forward Auth Auto-Login ──────────────────────────────────
+// Caddy sets these headers after successful forward_auth with Authentik.
+// Caddy strips these from external requests, so they are trustworthy.
+$authentikUser = $_SERVER['HTTP_X_AUTHENTIK_USERNAME'] ?? null;
+$authentikEmail = $_SERVER['HTTP_X_AUTHENTIK_EMAIL'] ?? null;
+if ($authentikUser && empty($_SESSION['user_id'])) {
+    require_once __DIR__ . '/models/User.php';
+    $userModel = new User();
+    $user = $userModel->findByUsername($authentikUser);
+
+    if (!$user) {
+        // Auto-create user — password is random since auth is via Authentik
+        $user = $userModel->create($authentikUser, bin2hex(random_bytes(32)), 'member', $authentikEmail);
+    }
+
+    // Auto-login: set session
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int) $user['id'];
+    $_SESSION['role'] = $user['role'];
+    $_SESSION['is_demo'] = false;
+}
+
 // ─── Load Config ────────────────────────────────────────────────────────────
 require_once __DIR__ . '/config/constants.php';
 require_once __DIR__ . '/middleware/RateLimiter.php';
@@ -309,6 +331,29 @@ try {
             }
             break;
 
+        // ── Meal Plan Routes ────────────────────────────────────────────
+        case 'meal-plan':
+            require_once __DIR__ . '/controllers/MealPlanController.php';
+            $controller = new MealPlanController();
+
+            if ($id === null && $method === 'GET') {
+                // GET /meal-plan
+                $response = $controller->getWeekPlan();
+            } elseif ($id === 'items' && $subResource === null && $method === 'POST') {
+                // POST /meal-plan/items
+                $response = $controller->addItem();
+            } elseif ($id === 'items' && is_numeric($subResource) && $method === 'PUT') {
+                // PUT /meal-plan/items/{id}
+                $response = $controller->updateItem((int) $subResource);
+            } elseif ($id === 'items' && is_numeric($subResource) && $method === 'DELETE') {
+                // DELETE /meal-plan/items/{id}
+                $response = $controller->removeItem((int) $subResource);
+            } elseif ($id === 'grocery' && $method === 'POST') {
+                // POST /meal-plan/grocery
+                $response = $controller->generateGrocery();
+            }
+            break;
+
         // ── User Routes (admin) ─────────────────────────────────────────
         case 'users':
             require_once __DIR__ . '/controllers/UserController.php';
@@ -324,11 +369,17 @@ try {
                         $response = $controller->create();
                         break;
                 }
+            } elseif (is_numeric($id) && $subResource === null && $method === 'PUT') {
+                // PUT /users/{id}
+                $response = $controller->update((int) $id);
             } elseif (is_numeric($id) && $subResource === 'password') {
                 // /users/{id}/password
                 if ($method === 'PUT') {
                     $response = $controller->resetPassword((int) $id);
                 }
+            } elseif (is_numeric($id) && $subResource === null && $method === 'DELETE') {
+                // DELETE /users/{id}
+                $response = $controller->delete((int) $id);
             }
             break;
 
