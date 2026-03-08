@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 
 export default function Layout({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const { isDemo } = useAuth();
 
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
@@ -17,6 +19,13 @@ export default function Layout({ children }) {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-h-screen">
+        {/* Demo Banner */}
+        {isDemo && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm text-amber-800">
+            You're viewing a demo account — actions are read-only
+          </div>
+        )}
+
         {/* Mobile Header */}
         <div className="md:hidden">
           <Header onSearch={handleSearch} />

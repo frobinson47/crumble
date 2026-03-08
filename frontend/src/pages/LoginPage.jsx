@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CookingPot, AlertCircle } from 'lucide-react';
+import { CookingPot, AlertCircle, Eye } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -23,6 +23,19 @@ export default function LoginPage() {
       navigate('/');
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await login('demo', 'demo');
+      navigate('/');
+    } catch (err) {
+      setError(err.message || 'Demo login failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -81,6 +94,22 @@ export default function LoginPage() {
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+
+          <div className="mt-4 pt-4 border-t border-cream-dark">
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              className="w-full"
+              size="lg"
+              onClick={handleDemo}
+            >
+              <Eye size={18} />
+              Try Demo
+            </Button>
+            <p className="text-xs text-warm-gray text-center mt-2">
+              Browse recipes in read-only mode
+            </p>
+          </div>
         </div>
       </div>
     </div>

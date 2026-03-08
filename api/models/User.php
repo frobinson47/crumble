@@ -13,7 +13,7 @@ class User {
      * Find a user by ID. Never returns password_hash.
      */
     public function findById(int $id): ?array {
-        $stmt = $this->db->prepare('SELECT id, username, role, created_at FROM users WHERE id = ?');
+        $stmt = $this->db->prepare('SELECT id, username, role, is_demo, created_at FROM users WHERE id = ?');
         $stmt->execute([$id]);
         $user = $stmt->fetch();
         return $user ?: null;
@@ -23,7 +23,7 @@ class User {
      * Find a user by username. Includes password_hash for verification.
      */
     public function findByUsername(string $username): ?array {
-        $stmt = $this->db->prepare('SELECT id, username, password_hash, role, failed_attempts, locked_until, created_at FROM users WHERE username = ?');
+        $stmt = $this->db->prepare('SELECT id, username, password_hash, role, is_demo, failed_attempts, locked_until, created_at FROM users WHERE username = ?');
         $stmt->execute([$username]);
         $user = $stmt->fetch();
         return $user ?: null;

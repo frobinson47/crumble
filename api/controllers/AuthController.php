@@ -20,14 +20,15 @@ class AuthController {
         $userModel = new User();
         $user = $userModel->findByUsername($input['username']);
 
-        // Check account lockout
-        if ($user && $userModel->isLocked($user['id'])) {
+        // Check account lockout (skip for demo account)
+        $isDemo = $user && $user['is_demo'];
+        if ($user && !$isDemo && $userModel->isLocked($user['id'])) {
             http_response_code(423);
             return ['error' => 'Account is temporarily locked. Try again later.', 'code' => 423];
         }
 
         if (!$user || !$userModel->verifyPassword($input['password'], $user['password_hash'])) {
-            if ($user) {
+            if ($user && !$isDemo) {
                 $userModel->recordFailedAttempt($user['id']);
             }
             http_response_code(401);
@@ -41,6 +42,7 @@ class AuthController {
         // Start session and store user info
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['role'] = $user['role'];
+        $_SESSION['is_demo'] = (bool) $user['is_demo'];
 
         // Return user without password hash
         unset($user['password_hash']);

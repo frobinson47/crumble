@@ -55,6 +55,7 @@ $_SESSION['last_activity'] = time();
 require_once __DIR__ . '/config/constants.php';
 require_once __DIR__ . '/middleware/RateLimiter.php';
 require_once __DIR__ . '/middleware/Csrf.php';
+require_once __DIR__ . '/middleware/DemoGuard.php';
 
 // ─── Parse Request ──────────────────────────────────────────────────────────
 $requestUri = $_SERVER['REQUEST_URI'];
@@ -90,6 +91,15 @@ try {
     $csrfExempt = ($resource === 'auth' && $id === 'login');
     if (!$csrfExempt) {
         Csrf::enforce();
+    }
+
+    // ── Demo Guard (block state-changing requests for demo users) ────────
+    $demoResult = DemoGuard::check($resource, $id);
+    if (!$demoResult['allowed']) {
+        http_response_code(403);
+        $response = ['error' => $demoResult['error'], 'code' => 403];
+        echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 
     switch ($resource) {
