@@ -9,3 +9,5 @@ docs/plans/
 cookies.txt
 api/.phpunit.result.cache
 .claude/
+gitleaks-*.json
+docs/screenshots/
