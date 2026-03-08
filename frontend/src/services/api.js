@@ -206,10 +206,48 @@ export function getUsers() {
   return request('/users');
 }
 
-export function createUser(username, password, role) {
-  return request('/users', { method: 'POST', body: { username, password, role } });
+export function createUser(username, password, role, email) {
+  return request('/users', { method: 'POST', body: { username, password, role, email } });
 }
 
 export function resetPassword(id, newPassword) {
   return request(`/users/${id}/password`, { method: 'PUT', body: { password: newPassword } });
+}
+
+export function updateUser(id, data) {
+  return request(`/users/${id}`, { method: 'PUT', body: data });
+}
+
+export function deleteUser(id) {
+  return request(`/users/${id}`, { method: 'DELETE' });
+}
+
+// Meal Planning
+export function getMealPlan(weekStart) {
+  return request(`/meal-plan?week=${weekStart}`);
+}
+
+export function addMealPlanItem(recipeId, dayOfWeek, weekStart) {
+  return request('/meal-plan/items', {
+    method: 'POST',
+    body: { recipe_id: recipeId, day_of_week: dayOfWeek, week_start: weekStart },
+  });
+}
+
+export function updateMealPlanItem(itemId, data) {
+  return request(`/meal-plan/items/${itemId}`, {
+    method: 'PUT',
+    body: data,
+  });
+}
+
+export function removeMealPlanItem(itemId) {
+  return request(`/meal-plan/items/${itemId}`, { method: 'DELETE' });
+}
+
+export function generateGroceryFromPlan(weekStart, listName) {
+  return request('/meal-plan/grocery', {
+    method: 'POST',
+    body: { week_start: weekStart, list_name: listName },
+  });
 }

@@ -1,13 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, Heart, ShoppingCart, User } from 'lucide-react';
+import { LayoutGrid, Plus, Heart, ShoppingCart, CalendarDays } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutGrid, label: 'Home' },
   { to: '/add', icon: Plus, label: 'Add' },
   { to: '/favorites', icon: Heart, label: 'Favorites' },
+  { to: '/meal-plan', icon: CalendarDays, label: 'Plan' },
   { to: '/grocery', icon: ShoppingCart, label: 'Grocery' },
-  { to: '/admin', icon: User, label: 'Profile' },
 ];
 
 export default function BottomNav() {
