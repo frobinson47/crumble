@@ -223,6 +223,16 @@ try {
                     require_once __DIR__ . '/controllers/CookLogController.php';
                     $cookController = new CookLogController();
                     $response = $cookController->log($recipeId);
+                } elseif ($subResource === 'share' && $method === 'POST') {
+                    // POST /recipes/{id}/share
+                    require_once __DIR__ . '/controllers/RecipeShareController.php';
+                    $shareController = new RecipeShareController();
+                    $response = $shareController->createShare($recipeId);
+                } elseif ($subResource === 'share' && $method === 'DELETE') {
+                    // DELETE /recipes/{id}/share
+                    require_once __DIR__ . '/controllers/RecipeShareController.php';
+                    $shareController = new RecipeShareController();
+                    $response = $shareController->revokeShare($recipeId);
                 } elseif ($subResource === 'related' && $method === 'GET') {
                     // /recipes/{id}/related
                     $response = $controller->related($recipeId);
@@ -328,6 +338,26 @@ try {
                         $response = $controller->addRecipe($listId, (int) $subId);
                     }
                 }
+            }
+            break;
+
+        // ── Shared Recipe Routes (public) ──────────────────────────────
+        case 'shared':
+            require_once __DIR__ . '/controllers/RecipeShareController.php';
+            $controller = new RecipeShareController();
+
+            if ($id && $method === 'GET') {
+                // Rate limit public endpoint
+                $rateLimiter = new RateLimiter();
+                $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+                $rateResult = $rateLimiter->check($clientIp, 'shared_view', 30, 60);
+                if (!$rateResult['allowed']) {
+                    http_response_code(429);
+                    header('Retry-After: ' . $rateResult['retryAfter']);
+                    $response = ['error' => 'Too many requests', 'code' => 429, 'retryAfter' => $rateResult['retryAfter']];
+                    break;
+                }
+                $response = $controller->getByToken($id);
             }
             break;
 

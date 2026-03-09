@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Clock, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
-  ArrowLeft, Plus, Printer, Share2, Mail, Download, Image
+  ArrowLeft, Plus, Printer, Link2
 } from 'lucide-react';
 import useRecipes from '../hooks/useRecipes';
 import { useAuth } from '../hooks/useAuth';
@@ -18,7 +18,8 @@ import { RecipeDetailSkeleton } from '../components/ui/Skeleton';
 import Input from '../components/ui/Input';
 import ServingsAdjuster from '../components/ui/ServingsAdjuster';
 import { scaleIngredients } from '../utils/ingredientScaling';
-import { generateRecipeCard, recipeToText } from '../utils/recipeCardGenerator';
+// Card sharing utils — commented out, may revisit as part of unified share modal
+// import { generateRecipeCard, recipeToText } from '../utils/recipeCardGenerator';
 import StarRating from '../components/ui/StarRating';
 import FavoriteButton from '../components/recipe/FavoriteButton';
 import CookButton from '../components/recipe/CookButton';
@@ -41,10 +42,15 @@ export default function RecipePage() {
   const [newListName, setNewListName] = useState('');
   const [groceryLoading, setGroceryLoading] = useState(false);
   const [adjustedServings, setAdjustedServings] = useState(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareCardUrl, setShareCardUrl] = useState(null);
-  const [shareCardBlob, setShareCardBlob] = useState(null);
-  const [shareGenerating, setShareGenerating] = useState(false);
+  // Card sharing state — commented out, may revisit as part of unified share modal
+  // const [showShareModal, setShowShareModal] = useState(false);
+  // const [shareCardUrl, setShareCardUrl] = useState(null);
+  // const [shareCardBlob, setShareCardBlob] = useState(null);
+  // const [shareGenerating, setShareGenerating] = useState(false);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkData, setShareLinkData] = useState(null);
+  const [shareLinkError, setShareLinkError] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     fetchRecipe(id);
@@ -106,48 +112,80 @@ export default function RecipePage() {
     }
   };
 
-  const handleShare = async () => {
-    setShowShareModal(true);
-    setShareGenerating(true);
+  // Card sharing handlers — commented out, may revisit as part of unified share modal
+  // const handleShare = async () => {
+  //   setShowShareModal(true);
+  //   setShareGenerating(true);
+  //   try {
+  //     const imgUrl = recipe.image_path ? `/uploads/${recipe.image_path}` : null;
+  //     const { blob, dataUrl } = await generateRecipeCard(recipe, imgUrl);
+  //     setShareCardUrl(dataUrl);
+  //     setShareCardBlob(blob);
+  //   } catch {
+  //     // Card generation failed, will show text-only options
+  //   } finally {
+  //     setShareGenerating(false);
+  //   }
+  // };
+
+  // const handleShareEmail = () => {
+  //   const text = recipeToText(recipe);
+  //   const subject = encodeURIComponent(recipe.title);
+  //   const body = encodeURIComponent(text);
+  //   window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  //   setShowShareModal(false);
+  // };
+
+  // const handleShareDownload = () => {
+  //   if (!shareCardBlob) return;
+  //   const url = URL.createObjectURL(shareCardBlob);
+  //   const a = document.createElement('a');
+  //   a.href = url;
+  //   a.download = `${recipe.title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+  //   a.click();
+  //   URL.revokeObjectURL(url);
+  // };
+
+  // const handleShareCopy = async () => {
+  //   if (!shareCardBlob) return;
+  //   try {
+  //     await navigator.clipboard.write([
+  //       new ClipboardItem({ 'image/png': shareCardBlob }),
+  //     ]);
+  //   } catch {
+  //     // Fallback: download instead
+  //     handleShareDownload();
+  //   }
+  // };
+
+  const handleShareLink = async () => {
+    setShowShareLinkModal(true);
+    setShareLinkData(null);
+    setShareLinkError(null);
+    setLinkCopied(false);
     try {
-      const imgUrl = recipe.image_path ? `/uploads/${recipe.image_path}` : null;
-      const { blob, dataUrl } = await generateRecipeCard(recipe, imgUrl);
-      setShareCardUrl(dataUrl);
-      setShareCardBlob(blob);
-    } catch {
-      // Card generation failed, will show text-only options
-    } finally {
-      setShareGenerating(false);
+      const data = await api.createShareLink(recipe.id);
+      setShareLinkData(data);
+    } catch (err) {
+      setShareLinkError(err.message || 'Failed to create share link');
     }
   };
 
-  const handleShareEmail = () => {
-    const text = recipeToText(recipe);
-    const subject = encodeURIComponent(recipe.title);
-    const body = encodeURIComponent(text);
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    setShowShareModal(false);
+  const shareLinkUrl = shareLinkData ? `${window.location.origin}/shared/${shareLinkData.token}` : '';
+
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(shareLinkUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
-  const handleShareDownload = () => {
-    if (!shareCardBlob) return;
-    const url = URL.createObjectURL(shareCardBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${recipe.title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleShareCopy = async () => {
-    if (!shareCardBlob) return;
+  const handleRevokeShareLink = async () => {
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': shareCardBlob }),
-      ]);
+      await api.revokeShareLink(recipe.id);
+      setShareLinkData(null);
+      setShowShareLinkModal(false);
     } catch {
-      // Fallback: download instead
-      handleShareDownload();
+      // handle error
     }
   };
 
@@ -337,12 +375,21 @@ export default function RecipePage() {
           <Printer size={18} />
           Print
         </Button>
+        {/* Card sharing button — commented out, may revisit as part of unified share modal
         <Button
           variant="outline"
           onClick={handleShare}
           className="print:hidden"
         >
           <Share2 size={18} />
+          Share Card
+        </Button> */}
+        <Button
+          variant="outline"
+          onClick={handleShareLink}
+          className="print:hidden"
+        >
+          <Link2 size={18} />
           Share
         </Button>
       </div>
@@ -465,14 +512,13 @@ export default function RecipePage() {
         )}
       </Modal>
 
-      {/* Share modal */}
-      <Modal
+      {/* Card share modal — commented out, may revisit as part of unified share modal */}
+      {/* <Modal
         isOpen={showShareModal}
         onClose={() => { setShowShareModal(false); setShareCardUrl(null); setShareCardBlob(null); }}
         title="Share Recipe"
       >
         <div className="space-y-4">
-          {/* Card preview */}
           {shareGenerating ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <Spinner />
@@ -483,8 +529,6 @@ export default function RecipePage() {
               <img src={shareCardUrl} alt="Recipe card preview" className="w-full" />
             </div>
           ) : null}
-
-          {/* Share actions */}
           <div className="space-y-2">
             <Button className="w-full" onClick={handleShareEmail}>
               <Mail size={18} />
@@ -507,6 +551,50 @@ export default function RecipePage() {
             </p>
           </div>
         </div>
+      </Modal> */}
+
+      {/* Share link modal */}
+      <Modal
+        isOpen={showShareLinkModal}
+        onClose={() => setShowShareLinkModal(false)}
+        title="Share Recipe Link"
+        size="sm"
+      >
+        {shareLinkData ? (
+          <div className="space-y-4">
+            <p className="text-sm text-brown-light">
+              Anyone with this link can view this recipe.
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={shareLinkUrl}
+                className="flex-1 px-3 py-2 rounded-xl border border-cream-dark bg-cream text-brown text-sm"
+              />
+              <Button variant="outline" onClick={handleCopyShareLink}>
+                {linkCopied ? 'Copied!' : 'Copy'}
+              </Button>
+            </div>
+            <p className="text-xs text-warm-gray">
+              Expires {new Date(shareLinkData.expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
+            <button
+              onClick={handleRevokeShareLink}
+              className="text-sm text-red-500 hover:text-red-700 transition-colors"
+            >
+              Revoke link
+            </button>
+          </div>
+        ) : shareLinkError ? (
+          <div className="text-center py-4">
+            <p className="text-sm text-red-500">{shareLinkError}</p>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <Spinner />
+          </div>
+        )}
       </Modal>
     </div>
   );
