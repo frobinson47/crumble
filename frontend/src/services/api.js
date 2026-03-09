@@ -222,6 +222,19 @@ export function deleteUser(id) {
   return request(`/users/${id}`, { method: 'DELETE' });
 }
 
+// Recipe Sharing
+export function createShareLink(recipeId) {
+  return request(`/recipes/${recipeId}/share`, { method: 'POST' });
+}
+
+export function revokeShareLink(recipeId) {
+  return request(`/recipes/${recipeId}/share`, { method: 'DELETE' });
+}
+
+export function getSharedRecipe(token) {
+  return request(`/shared/${token}`);
+}
+
 // Meal Planning
 export function getMealPlan(weekStart) {
   return request(`/meal-plan?week=${weekStart}`);

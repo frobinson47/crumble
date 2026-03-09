@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
@@ -14,14 +15,17 @@ import BulkImportPage from './pages/BulkImportPage';
 import CookHistoryPage from './pages/CookHistoryPage';
 import FavoritesPage from './pages/FavoritesPage';
 import MealPlanPage from './pages/MealPlanPage';
+import SharedRecipePage from './pages/SharedRecipePage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ErrorBoundary>
         <Routes>
-          {/* Public route */}
+          {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/shared/:token" element={<SharedRecipePage />} />
 
           {/* Protected routes */}
           <Route
@@ -128,6 +132,7 @@ export default function App() {
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );
