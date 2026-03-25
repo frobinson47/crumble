@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Crumble is a self-hosted recipe management app with a PHP API backend and React frontend, running on Laragon/Apache with MySQL.
+Cookslate is a self-hosted recipe management app with a PHP API backend and React frontend, running on Laragon/Apache with MySQL.
 
 ## Development Commands
 
 ### Frontend (from `frontend/`)
 ```bash
-npm run dev       # Vite dev server on port 5176, proxies /api to crumble.fmr.local
+npm run dev       # Vite dev server on port 5176, proxies /api to cookslate.fmr.local
 npm run build     # Production build to dist/
 npm run lint      # ESLint
 ```
@@ -33,7 +33,7 @@ Custom PHP microframework — no external framework. `api/index.php` is the sing
 
 **Request flow:** `.htaccess` rewrites → `index.php` (parses URL segments, applies middleware) → Controller → Model → JSON response.
 
-**URL structure:** `/api/{resource}/{id}/{subResource}/{subId}` (also supports `/crumble/api/` prefix).
+**URL structure:** `/api/{resource}/{id}/{subResource}/{subId}` (also supports `/cookslate/api/` and `/crumble/api/` prefixes).
 
 **Key directories:**
 - `controllers/` — Request handlers (AuthController, RecipeController, GroceryController, etc.)

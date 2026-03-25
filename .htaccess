@@ -1,14 +1,17 @@
+AddType application/manifest+json .webmanifest
+AddType application/javascript .js
+
 RewriteEngine On
 
 # API routes
 RewriteRule ^api/(.*)$ api/index.php [QSA,L]
 
 # Uploaded files — pass through
-RewriteCond %{REQUEST_URI} ^/crumble/uploads/
+RewriteCond %{REQUEST_URI} ^/(cookslate|crumble)/uploads/
 RewriteRule ^(.*)$ $1 [L]
 
 # Frontend static assets — pass through
-RewriteCond %{REQUEST_URI} ^/crumble/frontend/dist/
+RewriteCond %{REQUEST_URI} ^/(cookslate|crumble)/frontend/dist/
 RewriteRule ^(.*)$ $1 [L]
 
 # SPA fallback — everything else to frontend index.html
