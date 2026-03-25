@@ -2,17 +2,55 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Volume2 } from 'lucide-react';
 import Button from './Button';
 
-export default function Timer({ initialMinutes, onClose }) {
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification(minutes) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('Timer Done!', {
+        body: `Your ${minutes} minute timer has finished.`,
+        icon: '/cookslate_icon.png',
+        tag: `cookslate-timer-${minutes}`,
+        requireInteraction: true,
+      });
+    } catch {
+      // Notification not available (e.g. some mobile browsers)
+    }
+  }
+}
+
+export default function Timer({ initialMinutes, onClose, autoStart = false }) {
   const [totalSeconds, setTotalSeconds] = useState(initialMinutes * 60);
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(autoStart);
   const [isDone, setIsDone] = useState(false);
   const intervalRef = useRef(null);
   const audioContextRef = useRef(null);
 
+  // Request notification permission when timer auto-starts
+  useEffect(() => {
+    if (autoStart) requestNotificationPermission();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getAudioContext = useCallback(() => {
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      // Resume if suspended (iOS requires user gesture to resume)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      return audioContextRef.current;
+    }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = ctx;
+    return ctx;
+  }, []);
+
   const playBeep = useCallback(() => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioContextRef.current = ctx;
+      const ctx = getAudioContext();
 
       // Play 3 beeps
       for (let i = 0; i < 3; i++) {
@@ -32,7 +70,7 @@ export default function Timer({ initialMinutes, onClose }) {
     } catch {
       // Audio not available
     }
-  }, []);
+  }, [getAudioContext]);
 
   useEffect(() => {
     if (isRunning && totalSeconds > 0) {
@@ -43,6 +81,8 @@ export default function Timer({ initialMinutes, onClose }) {
             setIsRunning(false);
             setIsDone(true);
             playBeep();
+            if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 400]);
+            sendNotification(initialMinutes);
             return 0;
           }
           return prev - 1;
@@ -71,6 +111,7 @@ export default function Timer({ initialMinutes, onClose }) {
 
   const toggleRunning = () => {
     if (isDone) return;
+    if (!isRunning) requestNotificationPermission();
     setIsRunning(prev => !prev);
   };
 
@@ -121,7 +162,7 @@ export default function Timer({ initialMinutes, onClose }) {
       </div>
 
       {isDone && (
-        <span className="text-terracotta font-bold text-sm">Time is up!</span>
+        <span className="text-terracotta font-bold text-sm" role="alert">Time is up!</span>
       )}
     </div>
   );

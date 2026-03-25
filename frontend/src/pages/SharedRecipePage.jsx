@@ -4,8 +4,13 @@ import { Clock, Users, ExternalLink } from 'lucide-react';
 import { getSharedRecipe } from '../services/api';
 import IngredientList from '../components/recipe/IngredientList';
 import StepList from '../components/recipe/StepList';
+import NutritionFacts from '../components/recipe/NutritionFacts';
 import TagBadge from '../components/ui/TagBadge';
 import Spinner from '../components/ui/Spinner';
+import useDocumentTitle from '../hooks/useDocumentTitle';
+import { fullImageUrl } from '../utils/imageUrl';
+import { estimateDifficulty, DIFFICULTY_COLORS } from '../utils/recipeDifficulty';
+import { buildRecipeJsonLd, injectJsonLd, removeJsonLd } from '../utils/recipeJsonLd';
 
 export default function SharedRecipePage() {
   const { token } = useParams();
@@ -13,11 +18,15 @@ export default function SharedRecipePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  useDocumentTitle(recipe?.title);
+
   useEffect(() => {
     async function fetchRecipe() {
       try {
         const data = await getSharedRecipe(token);
         setRecipe(data);
+        const ld = buildRecipeJsonLd(data);
+        injectJsonLd(ld);
       } catch (err) {
         setError(err.message || 'This link has expired or doesn\'t exist');
       } finally {
@@ -25,6 +34,7 @@ export default function SharedRecipePage() {
       }
     }
     fetchRecipe();
+    return () => removeJsonLd();
   }, [token]);
 
   if (loading) {
@@ -40,11 +50,11 @@ export default function SharedRecipePage() {
       <div className="min-h-screen bg-cream">
         <header className="py-4 px-6 border-b border-cream-dark">
           <div className="max-w-2xl mx-auto">
-            <span className="font-serif text-2xl text-terracotta font-bold">Crumble</span>
+            <span className="font-serif text-2xl text-terracotta font-bold">Cookslate</span>
           </div>
         </header>
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="bg-surface rounded-2xl shadow-lg p-8">
             <h1 className="text-2xl font-bold text-brown font-serif mb-3">Link Expired or Not Found</h1>
             <p className="text-brown-light">
               This shared recipe link has expired or doesn't exist. Please ask the recipe owner for a new link.
@@ -55,7 +65,7 @@ export default function SharedRecipePage() {
     );
   }
 
-  const imageUrl = recipe.image_path ? `/uploads/${recipe.image_path}` : null;
+  const imageUrl = fullImageUrl(recipe.image_path);
   const instructions = Array.isArray(recipe.instructions)
     ? recipe.instructions
     : typeof recipe.instructions === 'string'
@@ -77,13 +87,13 @@ export default function SharedRecipePage() {
       {/* Header */}
       <header className="py-4 px-6 border-b border-cream-dark">
         <div className="max-w-2xl mx-auto">
-          <span className="font-serif text-2xl text-terracotta font-bold">Crumble</span>
+          <span className="font-serif text-2xl text-terracotta font-bold">Cookslate</span>
         </div>
       </header>
 
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+        <div className="bg-surface rounded-2xl shadow-lg p-6 md:p-8">
           {/* Image */}
           {imageUrl && (
             <div className="aspect-[16/9] rounded-xl overflow-hidden mb-6 -mx-6 -mt-6 md:-mx-8 md:-mt-8 md:rounded-t-2xl md:rounded-b-xl">
@@ -139,6 +149,14 @@ export default function SharedRecipePage() {
                 </span>
               </div>
             )}
+            {(() => {
+              const difficulty = estimateDifficulty(recipe);
+              return (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}>
+                  {difficulty}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Tags */}
@@ -149,6 +167,16 @@ export default function SharedRecipePage() {
               ))}
             </div>
           )}
+
+          {/* Nutrition */}
+          <NutritionFacts nutrition={{
+            calories: recipe.calories,
+            protein: recipe.protein,
+            carbs: recipe.carbs,
+            fat: recipe.fat,
+            fiber: recipe.fiber,
+            sugar: recipe.sugar,
+          }} />
 
           {/* Ingredients */}
           {recipe.ingredients && recipe.ingredients.length > 0 && (
@@ -193,7 +221,7 @@ export default function SharedRecipePage() {
       {/* Footer */}
       <footer className="py-6 text-center">
         <p className="text-warm-gray text-sm">
-          Made with <span className="font-serif text-terracotta font-semibold">Crumble</span> &middot; Your recipe manager
+          Made with <span className="font-serif text-terracotta font-semibold">Cookslate</span> &middot; Your recipe manager
         </p>
       </footer>
     </div>

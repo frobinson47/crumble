@@ -2,10 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/crumble/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/cookslate_icon.png" />
+    <meta name="theme-color" content="#C75B39" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1A1412" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-    <title>Crumble - Recipe Manager</title>
+    <title>Cookslate - Recipe Manager</title>
+    <script>
+      // Apply saved theme before render to prevent flash
+      (function(){
+        var t=localStorage.getItem('crumble-theme');
+        if(t==='dark'||t==='light'){
+          document.documentElement.setAttribute('data-theme',t);
+          var c=t==='dark'?'#1A1412':'#C75B39';
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){
+            m.removeAttribute('media');
+            m.setAttribute('content',c);
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

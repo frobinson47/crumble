@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Key, Trash2, Pencil, AlertCircle } from 'lucide-react';
+import { Shield, Plus, Key, Trash2, Pencil, AlertCircle, Download } from 'lucide-react';
 import * as api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import Spinner from '../components/ui/Spinner';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function AdminPage() {
+  useDocumentTitle('Admin');
+
   const { user, logout } = useAuth();
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,10 +129,33 @@ export default function AdminPage() {
           <Shield size={24} className="text-terracotta" />
           <h1 className="text-2xl font-bold text-brown">Admin Panel</h1>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} size="sm">
-          <Plus size={16} />
-          Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              try {
+                const data = await api.exportRecipes();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cookslate-export-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch {
+                setError('Failed to export recipes');
+              }
+            }}
+          >
+            <Download size={16} />
+            Export Recipes
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)} size="sm">
+            <Plus size={16} />
+            Add User
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -140,11 +166,11 @@ export default function AdminPage() {
       )}
 
       {/* Users table */}
-      <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+      <div className="bg-surface rounded-2xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-cream-dark bg-cream/50">
+              <tr className="border-b border-cream-dark bg-surface-raised">
                 <th className="text-left px-6 py-3 text-sm font-semibold text-brown">Username</th>
                 <th className="text-left px-6 py-3 text-sm font-semibold text-brown">Email</th>
                 <th className="text-left px-6 py-3 text-sm font-semibold text-brown">Role</th>
@@ -219,7 +245,7 @@ export default function AdminPage() {
       </div>
 
       {/* Account section */}
-      <div className="bg-white rounded-2xl shadow-md p-6">
+      <div className="bg-surface rounded-2xl shadow-md p-6">
         <h2 className="text-lg font-bold text-brown mb-4">Your Account</h2>
         <p className="text-brown-light text-sm mb-4">
           Logged in as <span className="font-semibold">{user?.username}</span> ({user?.role})
@@ -276,7 +302,7 @@ export default function AdminPage() {
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-cream-dark text-brown bg-white focus:outline-none focus:border-terracotta transition-colors duration-200 min-h-[44px]"
+              className="w-full px-4 py-2.5 rounded-xl border border-cream-dark text-brown bg-surface focus:outline-none focus:border-terracotta transition-colors duration-200 min-h-[44px]"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
@@ -324,7 +350,7 @@ export default function AdminPage() {
             <select
               value={editRole}
               onChange={(e) => setEditRole(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-cream-dark text-brown bg-white focus:outline-none focus:border-terracotta transition-colors duration-200 min-h-[44px]"
+              className="w-full px-4 py-2.5 rounded-xl border border-cream-dark text-brown bg-surface focus:outline-none focus:border-terracotta transition-colors duration-200 min-h-[44px]"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>

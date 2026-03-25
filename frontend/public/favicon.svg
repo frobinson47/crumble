@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Rounded square background matching Crumble cream -->
+  <rect width="512" height="512" rx="96" fill="#F5EDE3"/>
+  <!-- Cooking pot icon in terracotta -->
+  <g fill="none" stroke="#C75B39" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Pot body -->
+    <path d="M144 240h224v120c0 40-32 72-72 72H216c-40 0-72-32-72-72V240z"/>
+    <!-- Pot rim -->
+    <line x1="124" y1="240" x2="388" y2="240"/>
+    <!-- Handles -->
+    <path d="M124 264h-20c-16 0-28-12-28-28v0c0-16 12-28 28-28h20"/>
+    <path d="M388 264h20c16 0 28-12 28-28v0c0-16-12-28-28-28h-20"/>
+    <!-- Lid handle -->
+    <path d="M224 192h64"/>
+    <!-- Steam lines -->
+    <path d="M208 160c0-16 16-24 16-40" stroke-width="18"/>
+    <path d="M256 148c0-16 16-24 16-40" stroke-width="18"/>
+    <path d="M304 160c0-16 16-24 16-40" stroke-width="18"/>
+  </g>
+</svg>

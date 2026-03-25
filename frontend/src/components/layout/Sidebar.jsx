@@ -1,10 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays } from 'lucide-react';
+import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import useTheme from '../../hooks/useTheme';
 
 export default function Sidebar() {
   const { user, isAdmin, logout } = useAuth();
+  const { theme, cycle } = useTheme();
+  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
+  const themeLabel = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System';
 
   const navItems = [
     { to: '/', icon: LayoutGrid, label: 'Recipes' },
@@ -14,6 +18,7 @@ export default function Sidebar() {
     { to: '/meal-plan', icon: CalendarDays, label: 'Meal Plan' },
     { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
     { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
+    { to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' },
   ];
 
   if (isAdmin) {
@@ -29,13 +34,13 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-cream-dark h-screen sticky top-0">
+    <aside className="hidden md:flex flex-col w-64 bg-surface border-r border-cream-dark h-screen sticky top-0">
       {/* Logo */}
       <div className="p-6 border-b border-cream-dark">
         <div className="flex items-center gap-2">
           <CookingPot className="text-terracotta" size={32} />
           <span className="text-2xl font-bold text-brown font-display">
-            Crumble
+            Cookslate
           </span>
         </div>
       </div>
@@ -74,6 +79,20 @@ export default function Sidebar() {
             <p className="text-xs text-warm-gray capitalize">{user?.role}</p>
           </div>
         </div>
+        <button
+          onClick={cycle}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"
+        >
+          <ThemeIcon size={20} />
+          <span>{themeLabel} Mode</span>
+        </button>
+        <a
+          href="/api/recipes/export-zip"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"
+        >
+          <Download size={20} />
+          <span>Export Recipes</span>
+        </a>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"

@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CookingPot, AlertCircle, Eye, Github } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CookingPot, AlertCircle, Eye, Github, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import * as api from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function LoginPage() {
+  useDocumentTitle('Sign In');
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check if SSO is configured
+    api.getSsoConfig()
+      .then(data => setSsoEnabled(data.enabled))
+      .catch(() => setSsoEnabled(false));
+
+    // Check for OAuth error in URL params
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      setError(oauthError);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,12 +68,12 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-terracotta/10 mb-4">
             <CookingPot size={36} className="text-terracotta" />
           </div>
-          <h1 className="text-3xl font-bold text-brown font-display">Crumble</h1>
+          <h1 className="text-3xl font-bold text-brown font-display">Cookslate</h1>
           <p className="text-warm-gray mt-1">Your cozy recipe manager</p>
         </div>
 
         {/* Login form */}
-        <div className="bg-white rounded-2xl shadow-md p-6">
+        <div className="bg-surface rounded-2xl shadow-md p-6">
           <h2 className="text-xl font-bold text-brown mb-6 text-center">Sign In</h2>
 
           {error && (
@@ -62,6 +81,26 @@ export default function LoginPage() {
               <AlertCircle size={16} className="shrink-0" />
               <span>{error}</span>
             </div>
+          )}
+
+          {ssoEnabled && (
+            <>
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+                disabled={isSubmitting}
+                onClick={() => { window.location.href = '/api/auth/oauth/redirect'; }}
+              >
+                <Shield size={18} />
+                Log in with Authentik
+              </Button>
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-cream-dark" />
+                <span className="text-xs text-warm-gray">or</span>
+                <div className="flex-1 h-px bg-cream-dark" />
+              </div>
+            </>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +111,7 @@ export default function LoginPage() {
               placeholder="Enter your username"
               required
               autoComplete="username"
-              autoFocus
+              autoFocus={!ssoEnabled}
             />
 
             <Input
@@ -116,7 +155,7 @@ export default function LoginPage() {
           <Github size={14} />
           <span>Open source on</span>
           <a
-            href="https://github.com/frobinson47/crumble"
+            href="https://github.com/frobinson47/cookslate"
             target="_blank"
             rel="noopener noreferrer"
             className="text-terracotta hover:underline"

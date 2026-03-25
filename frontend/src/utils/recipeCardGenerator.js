@@ -7,7 +7,7 @@ const CARD_WIDTH = 1080;
 const PADDING = 60;
 const CONTENT_WIDTH = CARD_WIDTH - PADDING * 2;
 
-// Colors matching Crumble design tokens
+// Colors matching Cookslate design tokens
 const COLORS = {
   bg: '#FFF8F0',
   title: '#4A3728',
@@ -242,7 +242,7 @@ export async function generateRecipeCard(recipe, imageUrl) {
   y += 10;
   ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   ctx.fillStyle = COLORS.divider;
-  ctx.fillText('Made with Crumble', PADDING, y + 18);
+  ctx.fillText('Made with Cookslate', PADDING, y + 18);
 
   // Export
   return new Promise((resolve) => {
