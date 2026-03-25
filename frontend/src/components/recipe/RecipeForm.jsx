@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, X, GripVertical, ChevronUp, ChevronDown, Upload, Image, ChevronRight } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronUp, ChevronDown, Upload, Image, ChevronRight, ClipboardPaste } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import TagBadge from '../ui/TagBadge';
 import Spinner from '../ui/Spinner';
 import * as api from '../../services/api';
+import { parseIngredient, parseIngredientBlock } from '../../utils/ingredientParser';
+import { fullImageUrl } from '../../utils/imageUrl';
+import { parseRecipeText } from '../../utils/recipeTextParser';
 
 const UNIT_OPTIONS = [
   '', 'cups', 'tbsp', 'tsp', 'oz', 'lb', 'g', 'kg', 'ml', 'L',
   'pieces', 'cloves', 'pinch', 'to taste',
+  'can', 'bunch', 'head', 'sprig', 'dash', 'slice', 'stick', 'package',
 ];
 
 const emptyIngredient = () => ({ amount: '', unit: '', name: '' });
@@ -37,10 +41,74 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const [fat, setFat] = useState('');
   const [fiber, setFiber] = useState('');
   const [sugar, setSugar] = useState('');
+  const [pasteMode, setPasteMode] = useState(false);
+  const [pasteRecipeMode, setPasteRecipeMode] = useState(false);
   const [errors, setErrors] = useState({});
 
   const fileInputRef = useRef(null);
   const tagInputRef = useRef(null);
+  const isInitializedRef = useRef(false);
+
+  // Draft auto-save (new recipes only, not edits)
+  const DRAFT_KEY = 'cookslate-recipe-draft';
+
+  // Restore draft on mount (new recipes only)
+  useEffect(() => {
+    if (initialData || isInitializedRef.current) return;
+    isInitializedRef.current = true;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      // Only restore if less than 24 hours old
+      if (Date.now() - draft._savedAt > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      // Only prompt if there's meaningful content
+      if (!draft.title && (!draft.ingredients || !draft.ingredients.some(i => i.name))) return;
+      if (!window.confirm('You have an unsaved recipe draft. Continue editing it?')) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      if (draft.title) setTitle(draft.title);
+      if (draft.description) setDescription(draft.description);
+      if (draft.prepTime) setPrepTime(draft.prepTime);
+      if (draft.cookTime) setCookTime(draft.cookTime);
+      if (draft.servings) setServings(draft.servings);
+      if (draft.sourceUrl) setSourceUrl(draft.sourceUrl);
+      if (draft.ingredients?.length) setIngredients(draft.ingredients);
+      if (draft.instructions?.length) setInstructions(draft.instructions);
+      if (draft.tags?.length) setTags(draft.tags);
+      if (draft.calories) { setCalories(draft.calories); setShowNutrition(true); }
+      if (draft.protein) { setProtein(draft.protein); setShowNutrition(true); }
+      if (draft.carbs) { setCarbs(draft.carbs); setShowNutrition(true); }
+      if (draft.fat) { setFat(draft.fat); setShowNutrition(true); }
+      if (draft.fiber) { setFiber(draft.fiber); setShowNutrition(true); }
+      if (draft.sugar) { setSugar(draft.sugar); setShowNutrition(true); }
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [initialData]);
+
+  // Auto-save draft every 2 seconds (new recipes only)
+  useEffect(() => {
+    if (initialData) return; // Don't save drafts when editing existing recipes
+    const timer = setTimeout(() => {
+      const hasContent = title || ingredients.some(i => i.name.trim());
+      if (!hasContent) return;
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          title, description, prepTime, cookTime, servings, sourceUrl,
+          ingredients, instructions, tags,
+          calories, protein, carbs, fat, fiber, sugar,
+          _savedAt: Date.now(),
+        }));
+      } catch { /* quota exceeded — ignore */ }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [initialData, title, description, prepTime, cookTime, servings, sourceUrl,
+      ingredients, instructions, tags, calories, protein, carbs, fat, fiber, sugar]);
 
   // Load all tags for autocomplete
   useEffect(() => {
@@ -81,7 +149,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       }
 
       if (initialData.image_path) {
-        setImagePreview(`/uploads/${initialData.image_path}`);
+        setImagePreview(fullImageUrl(initialData.image_path));
       } else if (initialData.source_image_url) {
         setSourceImageUrl(initialData.source_image_url);
         setImagePreview(initialData.source_image_url);
@@ -203,6 +271,28 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
     }
   };
 
+  // Paste entire recipe handler
+  const handlePasteRecipe = (text) => {
+    const parsed = parseRecipeText(text);
+    if (!parsed) return;
+    if (parsed.title) setTitle(parsed.title);
+    if (parsed.description) setDescription(parsed.description);
+    if (parsed.prepTime) setPrepTime(String(parsed.prepTime));
+    if (parsed.cookTime) setCookTime(String(parsed.cookTime));
+    if (parsed.servings) setServings(String(parsed.servings));
+    if (parsed.ingredients.length > 0) {
+      setIngredients(parsed.ingredients.map(ing => ({
+        amount: ing.amount || '',
+        unit: ing.unit || '',
+        name: ing.name || '',
+      })));
+    }
+    if (parsed.instructions.length > 0) {
+      setInstructions(parsed.instructions);
+    }
+    setPasteRecipeMode(false);
+  };
+
   // Submit
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -251,11 +341,53 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       data.source_image_url = sourceImageUrl;
     }
 
+    // Clear draft on submit
+    localStorage.removeItem(DRAFT_KEY);
+
     onSubmit(data, imageFile);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Paste Recipe shortcut (only for new recipes without data) */}
+      {!initialData && !title && (
+        pasteRecipeMode ? (
+          <div className="border-2 border-dashed border-terracotta/30 rounded-xl p-4 bg-terracotta/5">
+            <label className="block text-sm font-semibold text-brown mb-2">
+              Paste your full recipe text below
+            </label>
+            <textarea
+              className="w-full h-48 p-3 rounded-xl border border-cream-dark text-brown text-sm font-mono focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta resize-y"
+              placeholder={"Pasta Aglio e Olio\n\nPrep: 5 min  Cook: 15 min  Serves: 4\n\nIngredients\n1 lb spaghetti\n6 cloves garlic, thinly sliced\n1/2 cup olive oil\n1 tsp red pepper flakes\nFresh parsley, chopped\nSalt to taste\n\nInstructions\n1. Cook spaghetti according to package directions.\n2. Heat olive oil in a large skillet over medium heat.\n3. Add garlic and cook until golden, about 2 minutes.\n4. Add red pepper flakes and toss with drained pasta.\n5. Garnish with parsley and serve immediately."}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setPasteRecipeMode(false);
+              }}
+              onBlur={(e) => {
+                const text = e.target.value.trim();
+                if (text) {
+                  handlePasteRecipe(text);
+                } else {
+                  setPasteRecipeMode(false);
+                }
+              }}
+            />
+            <p className="text-xs text-warm-gray mt-1.5">
+              Click outside when done. The parser will extract title, ingredients, instructions, and times.
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPasteRecipeMode(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-cream-dark rounded-xl text-warm-gray hover:text-terracotta hover:border-terracotta/30 transition-colors duration-200"
+          >
+            <ClipboardPaste size={18} />
+            <span className="text-sm font-medium">Paste a full recipe</span>
+          </button>
+        )
+      )}
+
       {/* Title */}
       <Input
         label="Recipe Title"
@@ -407,18 +539,51 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
               <select
                 value={ing.unit}
                 onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
-                className="w-24 px-2 py-2 rounded-xl border border-cream-dark text-brown focus:outline-none focus:border-terracotta text-sm bg-white min-h-[44px]"
+                className="w-24 px-2 py-2 rounded-xl border border-cream-dark text-brown focus:outline-none focus:border-terracotta text-sm bg-surface min-h-[44px]"
               >
                 {UNIT_OPTIONS.map(u => (
                   <option key={u} value={u}>{u || '(unit)'}</option>
                 ))}
               </select>
 
-              {/* Name */}
+              {/* Name — supports free-text parsing on blur/Enter when amount is empty */}
               <input
                 type="text"
                 value={ing.name}
                 onChange={(e) => updateIngredient(index, 'name', e.target.value)}
+                onBlur={(e) => {
+                  const text = e.target.value.trim();
+                  if (text && !ing.amount && !ing.unit) {
+                    const parsed = parseIngredient(text);
+                    if (parsed.amount || parsed.unit) {
+                      setIngredients(prev => prev.map((item, i) =>
+                        i === index ? { amount: parsed.amount || '', unit: parsed.unit || '', name: parsed.name } : item
+                      ));
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const text = e.target.value.trim();
+                    if (text && !ing.amount && !ing.unit) {
+                      const parsed = parseIngredient(text);
+                      if (parsed.amount || parsed.unit) {
+                        setIngredients(prev => prev.map((item, i) =>
+                          i === index ? { amount: parsed.amount || '', unit: parsed.unit || '', name: parsed.name } : item
+                        ));
+                      }
+                    }
+                    // Auto-add new row and focus it
+                    if (text) {
+                      setIngredients(prev => [...prev, emptyIngredient()]);
+                      setTimeout(() => {
+                        const inputs = document.querySelectorAll('input[placeholder="Ingredient name"]');
+                        inputs[inputs.length - 1]?.focus();
+                      }, 50);
+                    }
+                  }
+                }}
                 placeholder="Ingredient name"
                 className="flex-1 px-3 py-2 rounded-xl border border-cream-dark text-brown focus:outline-none focus:border-terracotta text-sm min-h-[44px]"
               />
@@ -437,16 +602,59 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
           ))}
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={addIngredient}
-          className="mt-2"
-        >
-          <Plus size={16} />
-          Add Ingredient
-        </Button>
+        {/* Paste multiple ingredients */}
+        {pasteMode ? (
+          <div className="mt-3">
+            <textarea
+              className="w-full h-36 p-3 rounded-xl border border-cream-dark text-brown text-sm font-mono focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta"
+              placeholder={"Paste ingredients, one per line:\n2 cups flour\n1 tsp salt\n3 large eggs\n½ cup sugar"}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setPasteMode(false);
+              }}
+              onBlur={(e) => {
+                const text = e.target.value.trim();
+                if (text) {
+                  const parsed = parseIngredientBlock(text);
+                  if (parsed.length > 0) {
+                    setIngredients(prev => {
+                      // Remove empty trailing ingredient if it's the only one
+                      const filtered = prev.filter(ing => ing.name.trim() || ing.amount);
+                      return [...filtered, ...parsed.map(p => ({
+                        amount: p.amount || '',
+                        unit: p.unit || '',
+                        name: p.name || '',
+                      }))];
+                    });
+                  }
+                }
+                setPasteMode(false);
+              }}
+            />
+            <p className="text-xs text-warm-gray mt-1">
+              Click outside or press Escape when done
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addIngredient}
+            >
+              <Plus size={16} />
+              Add Ingredient
+            </Button>
+            <button
+              type="button"
+              onClick={() => setPasteMode(true)}
+              className="text-sm text-terracotta hover:text-terracotta-dark transition-colors px-2 py-1"
+            >
+              Paste multiple
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Instructions */}
@@ -605,7 +813,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
           {/* Suggestions dropdown */}
           {tagSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-cream-dark rounded-xl shadow-lg z-10 overflow-hidden">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-cream-dark rounded-xl shadow-lg z-10 overflow-hidden">
               {tagSuggestions.map(suggestion => (
                 <button
                   key={suggestion}

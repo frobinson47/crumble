@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, UtensilsCrossed, Clock } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, ChevronLeft, ChevronRight, UtensilsCrossed, Clock, Check, Pencil } from 'lucide-react';
 import useWakeLock from '../../hooks/useWakeLock';
 import Timer from '../ui/Timer';
 import IngredientList from './IngredientList';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
+import * as api from '../../services/api';
 
 const TIME_REGEX = /(\d+)\s*(minutes?|mins?|hours?|hrs?)/gi;
 
@@ -21,13 +24,72 @@ function parseTimers(text) {
   return timers;
 }
 
-export default function CookMode({ steps, ingredients, onClose }) {
-  const [currentStep, setCurrentStep] = useState(0);
+function highlightIngredients(text, ingredients) {
+  if (!ingredients || ingredients.length === 0) return text;
+
+  const names = ingredients
+    .map(ing => (ing.name || '').trim())
+    .filter(n => n.length >= 3)
+    .sort((a, b) => b.length - a.length);
+
+  if (names.length === 0) return text;
+
+  const escapedNames = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`\\b(${escapedNames.join('|')})\\b`, 'gi');
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<span key={match.index} className="text-terracotta font-medium">{match[0]}</span>);
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 1 ? parts : text;
+}
+
+const COOK_PROGRESS_KEY = 'cookslate-cook-progress';
+
+function getSavedProgress(recipeId) {
+  try {
+    const raw = sessionStorage.getItem(COOK_PROGRESS_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.recipeId === recipeId && data.step > 0) return data.step;
+  } catch {}
+  return null;
+}
+
+function saveProgress(recipeId, step) {
+  try {
+    sessionStorage.setItem(COOK_PROGRESS_KEY, JSON.stringify({ recipeId, step }));
+  } catch {}
+}
+
+function clearProgress() {
+  try { sessionStorage.removeItem(COOK_PROGRESS_KEY); } catch {}
+}
+
+export default function CookMode({ steps, ingredients, onClose, recipeId, onDone, annotations = {} }) {
+  const savedStep = recipeId ? getSavedProgress(recipeId) : null;
+  const [currentStep, setCurrentStep] = useState(savedStep || 0);
+  const [showResumeBar, setShowResumeBar] = useState(savedStep !== null && savedStep > 0);
   const [showIngredients, setShowIngredients] = useState(false);
   const [activeTimers, setActiveTimers] = useState([]);
   const touchStartRef = useRef(null);
   const touchDiffRef = useRef(0);
   const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
+
+  // Save progress when step changes
+  useEffect(() => {
+    if (recipeId) saveProgress(recipeId, currentStep);
+  }, [recipeId, currentStep]);
 
   // Acquire wake lock on mount
   useEffect(() => {
@@ -45,23 +107,57 @@ export default function CookMode({ steps, ingredients, onClose }) {
     };
   }, []);
 
+  const [showDoneModal, setShowDoneModal] = useState(false);
+  const [doneNotes, setDoneNotes] = useState('');
+  const [doneLoading, setDoneLoading] = useState(false);
+  const [logged, setLogged] = useState(false);
+
   const totalSteps = steps.length;
   const stepText = typeof steps[currentStep] === 'string'
     ? steps[currentStep]
     : steps[currentStep]?.text || String(steps[currentStep]);
   const detectedTimers = parseTimers(stepText);
+  const highlightedText = useMemo(
+    () => highlightIngredients(stepText, ingredients),
+    [stepText, ingredients]
+  );
+
+  const handleDone = () => {
+    if (recipeId) {
+      setShowDoneModal(true);
+    } else {
+      clearProgress();
+      onClose();
+    }
+  };
+
+  const handleLogCook = async (withNotes = false) => {
+    if (doneLoading) return;
+    setDoneLoading(true);
+    try {
+      await api.logCook(recipeId, withNotes ? doneNotes.trim() : null);
+      clearProgress();
+      setLogged(true);
+      setShowDoneModal(false);
+      setDoneNotes('');
+      if (onDone) onDone();
+      setTimeout(() => onClose(), 1200);
+    } catch {
+      onClose();
+    } finally {
+      setDoneLoading(false);
+    }
+  };
 
   const goNext = useCallback(() => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
-      setActiveTimers([]);
     }
   }, [currentStep, totalSteps]);
 
   const goPrev = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
-      setActiveTimers([]);
     }
   }, [currentStep]);
 
@@ -102,33 +198,74 @@ export default function CookMode({ steps, ingredients, onClose }) {
   };
 
   const startTimer = (minutes) => {
-    setActiveTimers(prev => [...prev, { id: Date.now(), minutes }]);
+    setActiveTimers(prev => [...prev, { id: Date.now(), minutes, step: currentStep + 1 }]);
   };
+
+  // Auto-start timers when navigating to a step
+  const prevStepRef = useRef(currentStep);
+  useEffect(() => {
+    if (prevStepRef.current !== currentStep) {
+      prevStepRef.current = currentStep;
+      const stepTimers = parseTimers(
+        typeof steps[currentStep] === 'string'
+          ? steps[currentStep]
+          : steps[currentStep]?.text || String(steps[currentStep])
+      );
+      stepTimers.forEach(minutes => {
+        const alreadyActive = activeTimers.some(t => t.minutes === minutes && t.step === currentStep + 1);
+        if (!alreadyActive) {
+          startTimer(minutes);
+        }
+      });
+    }
+  }, [currentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-brown flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ backgroundColor: '#3E2723', color: '#FFF8F0' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Resume notification */}
+      {showResumeBar && (
+        <div className="flex items-center justify-between px-4 py-2 bg-terracotta/80 text-sm">
+          <span>Resumed at step {currentStep + 1}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setCurrentStep(0); setShowResumeBar(false); }}
+              className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 transition-colors text-xs"
+            >
+              Start over
+            </button>
+            <button
+              onClick={() => setShowResumeBar(false)}
+              className="px-2 py-0.5 rounded hover:bg-white/10 transition-colors text-xs"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="flex items-center justify-between p-4">
         <button
           onClick={() => setShowIngredients(!showIngredients)}
-          className="p-3 rounded-xl bg-brown-light/50 text-cream hover:bg-brown-light transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-3 rounded-xl bg-white/10 text-[#FFF8F0] hover:bg-white/20 transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Toggle ingredients"
         >
           <UtensilsCrossed size={22} />
         </button>
 
-        <span className="text-cream/70 font-medium text-sm">
+        <span className="text-[#FFF8F0]/70 font-medium text-sm">
           Step {currentStep + 1} of {totalSteps}
         </span>
 
         <button
           onClick={onClose}
-          className="p-3 rounded-xl bg-brown-light/50 text-cream hover:bg-brown-light transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-3 rounded-xl bg-white/10 text-[#FFF8F0] hover:bg-white/20 transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close cook mode"
         >
           <X size={22} />
@@ -137,7 +274,7 @@ export default function CookMode({ steps, ingredients, onClose }) {
 
       {/* Progress bar */}
       <div className="px-4">
-        <div className="h-1 bg-brown-light/30 rounded-full overflow-hidden">
+        <div className="h-1 bg-white/15 rounded-full overflow-hidden">
           <div
             className="h-full bg-terracotta rounded-full transition-all duration-300"
             style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
@@ -179,15 +316,23 @@ export default function CookMode({ steps, ingredients, onClose }) {
       {/* Step content */}
       <div className="flex-1 flex items-center justify-center px-6 md:px-16 py-8">
         <div className="max-w-2xl text-center">
-          <p className="text-cream text-xl md:text-2xl lg:text-3xl leading-relaxed font-light">
-            {stepText}
+          <p className="text-[#FFF8F0] text-xl md:text-2xl lg:text-3xl leading-relaxed font-light">
+            {highlightedText}
           </p>
+
+          {/* Annotation for this step */}
+          {annotations.instruction && annotations.instruction[currentStep] && (
+            <div className="mt-4 flex items-start gap-2 justify-center text-terracotta/80">
+              <Pencil size={14} className="mt-0.5 shrink-0" />
+              <span className="text-base italic">{annotations.instruction[currentStep]}</span>
+            </div>
+          )}
 
           {/* Timer detection */}
           {detectedTimers.length > 0 && (
             <div className="mt-8 space-y-3">
               {detectedTimers.map((minutes, idx) => {
-                const isActive = activeTimers.some(t => t.minutes === minutes);
+                const isActive = activeTimers.some(t => t.minutes === minutes && t.step === currentStep + 1);
                 if (isActive) return null;
                 return (
                   <button
@@ -203,27 +348,31 @@ export default function CookMode({ steps, ingredients, onClose }) {
             </div>
           )}
 
-          {/* Active timers */}
-          {activeTimers.length > 0 && (
-            <div className="mt-6 space-y-3 flex flex-col items-center">
-              {activeTimers.map((timer) => (
-                <Timer
-                  key={timer.id}
-                  initialMinutes={timer.minutes}
-                  onClose={() => setActiveTimers(prev => prev.filter(t => t.id !== timer.id))}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Persistent active timers — visible regardless of current step */}
+      {activeTimers.length > 0 && (
+        <div className="px-6 pb-2 flex flex-wrap justify-center gap-2">
+          {activeTimers.map((timer) => (
+            <div key={timer.id} className="flex items-center gap-2">
+              <span className="text-[#FFF8F0]/50 text-xs">Step {timer.step}</span>
+              <Timer
+                initialMinutes={timer.minutes}
+                autoStart
+                onClose={() => setActiveTimers(prev => prev.filter(t => t.id !== timer.id))}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Navigation buttons */}
       <div className="flex items-center justify-between p-6 gap-4">
         <button
           onClick={goPrev}
           disabled={currentStep === 0}
-          className="flex items-center gap-2 px-6 py-4 bg-brown-light/50 text-cream rounded-xl font-semibold hover:bg-brown-light transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed min-h-[56px] min-w-[120px] justify-center"
+          className="flex items-center gap-2 px-6 py-4 bg-white/10 text-[#FFF8F0] rounded-xl font-semibold hover:bg-white/20 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed min-h-[56px] min-w-[120px] justify-center"
         >
           <ChevronLeft size={22} />
           Previous
@@ -231,10 +380,10 @@ export default function CookMode({ steps, ingredients, onClose }) {
 
         {currentStep === totalSteps - 1 ? (
           <button
-            onClick={onClose}
+            onClick={handleDone}
             className="flex items-center gap-2 px-6 py-4 bg-sage text-white rounded-xl font-semibold hover:bg-sage-dark transition-colors duration-200 min-h-[56px] min-w-[120px] justify-center"
           >
-            Done!
+            {logged ? <><Check size={20} /> Logged!</> : 'Done!'}
           </button>
         ) : (
           <button
@@ -246,6 +395,41 @@ export default function CookMode({ steps, ingredients, onClose }) {
           </button>
         )}
       </div>
+
+      {/* Cook completion modal */}
+      <Modal
+        isOpen={showDoneModal}
+        onClose={() => { setShowDoneModal(false); onClose(); }}
+        title="Nice! How'd it go?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <textarea
+            value={doneNotes}
+            onChange={(e) => setDoneNotes(e.target.value)}
+            placeholder="Add a note... (optional)&#10;e.g., Used half the sugar, turned out perfect."
+            className="w-full h-24 p-3 rounded-xl border border-cream-dark text-brown text-sm placeholder:text-warm-gray focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta resize-none"
+            autoFocus
+          />
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleLogCook(false)}
+              disabled={doneLoading}
+            >
+              Just Log It
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleLogCook(true)}
+              disabled={doneLoading || !doneNotes.trim()}
+            >
+              {doneLoading ? 'Saving...' : 'Save Note'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

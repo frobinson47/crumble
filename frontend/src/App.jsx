@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { migrateLocalStorage } from './utils/storageMigration';
+
+migrateLocalStorage();
 import { AuthProvider } from './hooks/useAuth';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -15,6 +18,7 @@ import BulkImportPage from './pages/BulkImportPage';
 import CookHistoryPage from './pages/CookHistoryPage';
 import FavoritesPage from './pages/FavoritesPage';
 import MealPlanPage from './pages/MealPlanPage';
+import StatsPage from './pages/StatsPage';
 import SharedRecipePage from './pages/SharedRecipePage';
 
 export default function App() {
@@ -114,6 +118,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <CookHistoryPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stats"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <StatsPage />
                 </Layout>
               </ProtectedRoute>
             }

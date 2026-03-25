@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const STORAGE_KEY = 'crumble_recently_viewed';
+const STORAGE_KEY = 'cookslate_recently_viewed';
 const MAX_ITEMS = 10;
 
 export default function useRecentlyViewed() {
