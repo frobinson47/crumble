@@ -162,7 +162,7 @@ class ImageProcessor {
         }
 
         // Write to temp file
-        $tmpFile = tempnam(sys_get_temp_dir(), 'crumble_img_');
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cookslate_img_');
         file_put_contents($tmpFile, $imageData);
 
         // Create a fake $_FILES-like array

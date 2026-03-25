@@ -6,7 +6,7 @@ class RateLimiter
 
     public function __construct(?string $storageDir = null)
     {
-        $this->storageDir = $storageDir ?? sys_get_temp_dir() . '/crumble_ratelimit';
+        $this->storageDir = $storageDir ?? sys_get_temp_dir() . '/cookslate_ratelimit';
         if (!is_dir($this->storageDir)) {
             mkdir($this->storageDir, 0755, true);
         }
