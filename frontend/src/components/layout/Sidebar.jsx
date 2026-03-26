@@ -3,10 +3,12 @@ import { NavLink } from 'react-router-dom';
 import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, Settings } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
+import { useLicense } from '../../pro/hooks/useLicense';
 
 export default function Sidebar() {
   const { user, isAdmin, logout } = useAuth();
   const { theme, cycle } = useTheme();
+  const { active: proActive } = useLicense();
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
   const themeLabel = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System';
 
@@ -15,10 +17,10 @@ export default function Sidebar() {
     { to: '/add', icon: Plus, label: 'Add Recipe' },
     { to: '/bulk-import', icon: Upload, label: 'Bulk Import' },
     { to: '/favorites', icon: Heart, label: 'Favorites' },
-    { to: '/meal-plan', icon: CalendarDays, label: 'Meal Plan' },
+    ...(proActive ? [{ to: '/meal-plan', icon: CalendarDays, label: 'Meal Plan' }] : []),
     { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
     { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
-    { to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' },
+    ...(proActive ? [{ to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' }] : []),
   ];
 
   if (isAdmin) {

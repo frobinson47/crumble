@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, X, ShoppingCart, CalendarDays } from 'lucide-react';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import Spinner from '../components/ui/Spinner';
-import * as api from '../services/api';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Spinner from '../../components/ui/Spinner';
+import * as api from '../../services/api';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+import { thumbImageUrl } from '../../utils/imageUrl';
 
 // Date helpers
 function getMonday(date) {
@@ -49,6 +51,8 @@ function getDefaultMobileDay(weekStart) {
 }
 
 export default function MealPlanPage() {
+  useDocumentTitle('Meal Plan');
+
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [plan, setPlan] = useState(null);
@@ -191,8 +195,9 @@ export default function MealPlanPage() {
     <div key={item.id} className="flex items-center gap-2 p-2 bg-cream rounded-xl group">
       {item.recipe.image_path && (
         <img
-          src={`/uploads/${item.recipe.image_path}`}
+          src={thumbImageUrl(item.recipe.image_path)}
           alt={item.recipe.title}
+          loading="lazy"
           className="w-10 h-10 rounded-lg object-cover shrink-0"
         />
       )}
@@ -222,7 +227,7 @@ export default function MealPlanPage() {
       </div>
 
       {/* Week navigation */}
-      <div className="flex items-center justify-between bg-white rounded-2xl shadow-md px-4 py-3">
+      <div className="flex items-center justify-between bg-surface rounded-2xl shadow-md px-4 py-3">
         <button
           onClick={goToPreviousWeek}
           className="p-2 rounded-xl text-brown-light hover:bg-cream-dark transition-colors duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -266,7 +271,7 @@ export default function MealPlanPage() {
               return (
                 <div
                   key={dayIndex}
-                  className={`bg-white rounded-2xl shadow-md p-3 flex flex-col min-h-[200px] ${isToday ? 'ring-2 ring-terracotta/30' : ''}`}
+                  className={`bg-surface rounded-2xl shadow-md p-3 flex flex-col min-h-[200px] ${isToday ? 'ring-2 ring-terracotta/30' : ''}`}
                 >
                   {/* Day header */}
                   <div className="text-center mb-3 pb-2 border-b border-cream-dark">
@@ -299,7 +304,7 @@ export default function MealPlanPage() {
           {/* Mobile: day picker + single day view */}
           <div className="md:hidden space-y-4">
             {/* Day picker */}
-            <div className="flex items-center justify-around bg-white rounded-2xl shadow-md p-2">
+            <div className="flex items-center justify-around bg-surface rounded-2xl shadow-md p-2">
               {DAY_NAMES.map((dayName, dayIndex) => {
                 const dayDate = getDayDate(weekStart, dayIndex);
                 const isActive = activeMobileDay === dayIndex;
@@ -329,7 +334,7 @@ export default function MealPlanPage() {
             </div>
 
             {/* Selected day content */}
-            <div className="bg-white rounded-2xl shadow-md p-4">
+            <div className="bg-surface rounded-2xl shadow-md p-4">
               <h3 className="text-lg font-bold text-brown font-serif mb-4">
                 {DAY_NAMES_FULL[activeMobileDay]}, {getDayDate(weekStart, activeMobileDay).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               </h3>
@@ -364,7 +369,7 @@ export default function MealPlanPage() {
           placeholder="Search recipes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2.5 rounded-xl border border-cream-dark bg-white text-brown placeholder:text-warm-gray focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-colors duration-200"
+          className="w-full px-4 py-2.5 rounded-xl border border-cream-dark bg-surface text-brown placeholder:text-warm-gray focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-colors duration-200"
           autoFocus
         />
         <div className="mt-3 max-h-96 overflow-y-auto space-y-2">
@@ -383,8 +388,9 @@ export default function MealPlanPage() {
               >
                 {recipe.image_path && (
                   <img
-                    src={`/uploads/${recipe.image_path}`}
+                    src={thumbImageUrl(recipe.image_path)}
                     alt={recipe.title}
+                    loading="lazy"
                     className="w-12 h-12 rounded-lg object-cover shrink-0"
                   />
                 )}
@@ -433,7 +439,7 @@ export default function MealPlanPage() {
                 type="text"
                 value={groceryListName}
                 onChange={(e) => setGroceryListName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-cream-dark bg-white text-brown placeholder:text-warm-gray focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-colors duration-200"
+                className="w-full px-4 py-2.5 rounded-xl border border-cream-dark bg-surface text-brown placeholder:text-warm-gray focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-colors duration-200"
               />
             </div>
             <div className="flex gap-3 justify-end">

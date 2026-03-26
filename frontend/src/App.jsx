@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { migrateLocalStorage } from './utils/storageMigration';
 
 migrateLocalStorage();
 import { AuthProvider } from './hooks/useAuth';
-import { LicenseProvider } from './pro/hooks/useLicense';
+import { LicenseProvider, useLicense } from './pro/hooks/useLicense';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -18,10 +18,17 @@ import AdminPage from './pages/AdminPage';
 import BulkImportPage from './pages/BulkImportPage';
 import CookHistoryPage from './pages/CookHistoryPage';
 import FavoritesPage from './pages/FavoritesPage';
-import MealPlanPage from './pages/MealPlanPage';
-import StatsPage from './pages/StatsPage';
+const MealPlanPage = lazy(() => import('./pro/pages/MealPlanPage'));
+const StatsPage = lazy(() => import('./pro/pages/StatsPage'));
 import SharedRecipePage from './pages/SharedRecipePage';
 import SettingsPage from './pages/SettingsPage';
+
+function ProRoute({ children }) {
+  const { active, loading } = useLicense();
+  if (loading) return null;
+  if (!active) return <Navigate to="/settings" replace />;
+  return <Suspense fallback={null}>{children}</Suspense>;
+}
 
 export default function App() {
   return (
@@ -110,7 +117,7 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <MealPlanPage />
+                  <ProRoute><MealPlanPage /></ProRoute>
                 </Layout>
               </ProtectedRoute>
             }
@@ -130,7 +137,7 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <StatsPage />
+                  <ProRoute><StatsPage /></ProRoute>
                 </Layout>
               </ProtectedRoute>
             }
