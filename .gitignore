@@ -12,3 +12,4 @@ api/.phpunit.result.cache
 gitleaks-*.json
 docs/screenshots/
 api/config/license.key
+api/config/license.private.pem
