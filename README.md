@@ -54,5 +54,5 @@ A recipe manager that remembers how *you* cook — not just what you cook. Self-
 
 ## Links
 
-- [Get a Pro license](https://cookslate.com)
+- [Get a Pro license](https://cookslate.app)
 - [Report a bug](https://github.com/frobinson47/cookslate/issues)

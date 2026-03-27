@@ -104,8 +104,8 @@ export default function SettingsPage() {
       </div>
 
       <p className="mt-4 text-center text-sm text-warm-400">
-        <a href="https://cookslate.com" target="_blank" rel="noopener noreferrer" className="hover:text-terracotta transition-colors">
-          Get a license at cookslate.com
+        <a href="https://cookslate.app" target="_blank" rel="noopener noreferrer" className="hover:text-terracotta transition-colors">
+          Get a license at cookslate.app
         </a>
       </p>
     </div>
