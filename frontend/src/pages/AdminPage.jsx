@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   // Create user form
@@ -85,16 +86,9 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteUser = async (u) => {
-    if (!window.confirm(`Are you sure you want to delete user "${u.username}"? This cannot be undone.`)) {
-      return;
-    }
-    try {
-      await api.deleteUser(u.id);
-      fetchUsers();
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleDeleteUser = (u) => {
+    setSelectedUser(u);
+    setShowDeleteModal(true);
   };
 
   const handleResetPassword = async (e) => {
@@ -254,6 +248,35 @@ export default function AdminPage() {
           Sign Out
         </Button>
       </div>
+
+      {/* Delete user confirmation modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setSelectedUser(null); }}
+        title="Delete User"
+        size="sm"
+      >
+        <p className="text-brown-light mb-6">
+          Are you sure you want to delete user &ldquo;{selectedUser?.username}&rdquo;? This cannot be undone.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="ghost" onClick={() => { setShowDeleteModal(false); setSelectedUser(null); }}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={async () => {
+            try {
+              await api.deleteUser(selectedUser.id);
+              fetchUsers();
+            } catch (err) {
+              setError(err.message);
+            }
+            setShowDeleteModal(false);
+            setSelectedUser(null);
+          }}>
+            Delete
+          </Button>
+        </div>
+      </Modal>
 
       {/* Create user modal */}
       <Modal

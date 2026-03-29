@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import { Plus, Search, Clock, ArrowRight, UtensilsCrossed, X, ChefHat, CalendarDays, RotateCcw, Sparkles, Link2, FileUp, ClipboardPaste } from 'lucide-react';
 import RecipeGrid from '../components/recipe/RecipeGrid';
 import useRecipes from '../hooks/useRecipes';
@@ -26,6 +28,7 @@ export default function HomePage({ searchQuery = '' }) {
   const [todayMeals, setTodayMeals] = useState([]);
   const [forgottenFavorites, setForgottenFavorites] = useState([]);
   const [uncookedRecipes, setUncookedRecipes] = useState([]);
+  const [deleteTagConfirm, setDeleteTagConfirm] = useState(null);
 
   // Fetch today's meal plan, forgotten favorites, and uncooked recipes
   useEffect(() => {
@@ -92,15 +95,8 @@ export default function HomePage({ searchQuery = '' }) {
     setActiveTag(newTag);
   };
 
-  const handleDeleteTag = async (tag) => {
-    if (!window.confirm(`Delete tag "${tag.name}"? It will be removed from all recipes.`)) return;
-    try {
-      await api.deleteTag(tag.id);
-      setTags(prev => prev.filter(t => t.id !== tag.id));
-      if (activeTag === tag.name) setActiveTag('');
-    } catch {
-      // Silently fail
-    }
+  const handleDeleteTag = (tag) => {
+    setDeleteTagConfirm(tag);
   };
 
   const handleLoadMore = () => {
@@ -645,6 +641,29 @@ export default function HomePage({ searchQuery = '' }) {
       >
         <Plus size={28} />
       </Link>
+
+      {/* Delete tag confirmation modal */}
+      <Modal
+        isOpen={deleteTagConfirm !== null}
+        onClose={() => setDeleteTagConfirm(null)}
+        title="Delete Tag"
+        size="sm"
+      >
+        <p className="text-brown-light mb-6">
+          Delete tag &ldquo;{deleteTagConfirm?.name}&rdquo;? It will be removed from all recipes.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="ghost" onClick={() => setDeleteTagConfirm(null)}>Cancel</Button>
+          <Button variant="danger" onClick={async () => {
+            try {
+              await api.deleteTag(deleteTagConfirm.id);
+              setTags(prev => prev.filter(t => t.id !== deleteTagConfirm.id));
+              if (activeTag === deleteTagConfirm.name) setActiveTag('');
+            } catch {}
+            setDeleteTagConfirm(null);
+          }}>Delete</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

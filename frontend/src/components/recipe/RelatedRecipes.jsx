@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, UtensilsCrossed } from 'lucide-react';
 import * as api from '../../services/api';
+import { thumbImageUrl } from '../../utils/imageUrl';
 
 export default function RelatedRecipes({ recipeId }) {
   const [related, setRelated] = useState([]);
@@ -16,26 +17,46 @@ export default function RelatedRecipes({ recipeId }) {
       .finally(() => setLoading(false));
   }, [recipeId]);
 
-  if (loading || related.length === 0) return null;
+  if (loading) {
+    return (
+      <div className="mt-12 print:hidden">
+        <h2 className="text-xl font-bold text-brown mb-4 font-serif">Related Recipes</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-surface rounded-xl overflow-hidden animate-pulse">
+              <div className="aspect-[4/3] bg-cream-dark" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 bg-cream-dark rounded w-3/4" />
+                <div className="h-3 bg-cream-dark rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (related.length === 0) return null;
 
   return (
-    <div className="mt-12">
+    <div className="mt-12 print:hidden">
       <h2 className="text-xl font-bold text-brown mb-4 font-serif">Related Recipes</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {related.map(recipe => {
-          const imageUrl = recipe.image_path ? `/uploads/${recipe.image_path}` : null;
+          const imageUrl = thumbImageUrl(recipe.image_path);
           const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
           return (
             <Link
               key={recipe.id}
               to={`/recipe/${recipe.id}`}
-              className="group block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
+              className="group block bg-surface rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
             >
               <div className="aspect-[4/3] bg-cream-dark overflow-hidden">
                 {imageUrl ? (
                   <img
                     src={imageUrl}
                     alt={recipe.title}
+                    loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (

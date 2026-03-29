@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Search, X, CookingPot, Sun, Moon, Monitor, Menu, BookOpen, TrendingUp, Upload, Shield, LogOut, User, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
@@ -9,19 +9,16 @@ export default function Header({ onSearch }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAdmin, logout } = useAuth();
   const { theme, cycle } = useTheme();
 
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
-  // Close drawer on navigation
+  // Close drawer on route change
   useEffect(() => {
-    if (drawerOpen) {
-      const close = () => setDrawerOpen(false);
-      window.addEventListener('popstate', close);
-      return () => window.removeEventListener('popstate', close);
-    }
-  }, [drawerOpen]);
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {

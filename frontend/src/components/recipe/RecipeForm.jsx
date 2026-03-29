@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, X, GripVertical, ChevronUp, ChevronDown, Upload, Image, ChevronRight, ClipboardPaste } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import Modal from '../ui/Modal';
 import TagBadge from '../ui/TagBadge';
 import Spinner from '../ui/Spinner';
 import * as api from '../../services/api';
@@ -44,6 +45,8 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteRecipeMode, setPasteRecipeMode] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState(null);
 
   const fileInputRef = useRef(null);
   const tagInputRef = useRef(null);
@@ -67,25 +70,8 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       }
       // Only prompt if there's meaningful content
       if (!draft.title && (!draft.ingredients || !draft.ingredients.some(i => i.name))) return;
-      if (!window.confirm('You have an unsaved recipe draft. Continue editing it?')) {
-        localStorage.removeItem(DRAFT_KEY);
-        return;
-      }
-      if (draft.title) setTitle(draft.title);
-      if (draft.description) setDescription(draft.description);
-      if (draft.prepTime) setPrepTime(draft.prepTime);
-      if (draft.cookTime) setCookTime(draft.cookTime);
-      if (draft.servings) setServings(draft.servings);
-      if (draft.sourceUrl) setSourceUrl(draft.sourceUrl);
-      if (draft.ingredients?.length) setIngredients(draft.ingredients);
-      if (draft.instructions?.length) setInstructions(draft.instructions);
-      if (draft.tags?.length) setTags(draft.tags);
-      if (draft.calories) { setCalories(draft.calories); setShowNutrition(true); }
-      if (draft.protein) { setProtein(draft.protein); setShowNutrition(true); }
-      if (draft.carbs) { setCarbs(draft.carbs); setShowNutrition(true); }
-      if (draft.fat) { setFat(draft.fat); setShowNutrition(true); }
-      if (draft.fiber) { setFiber(draft.fiber); setShowNutrition(true); }
-      if (draft.sugar) { setSugar(draft.sugar); setShowNutrition(true); }
+      setPendingDraft(draft);
+      setShowDraftPrompt(true);
     } catch {
       localStorage.removeItem(DRAFT_KEY);
     }
@@ -291,6 +277,25 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       setInstructions(parsed.instructions);
     }
     setPasteRecipeMode(false);
+  };
+
+  // Restore a saved draft into form state
+  const restoreDraft = (draft) => {
+    if (draft.title) setTitle(draft.title);
+    if (draft.description) setDescription(draft.description);
+    if (draft.prepTime) setPrepTime(draft.prepTime);
+    if (draft.cookTime) setCookTime(draft.cookTime);
+    if (draft.servings) setServings(draft.servings);
+    if (draft.sourceUrl) setSourceUrl(draft.sourceUrl);
+    if (draft.ingredients?.length) setIngredients(draft.ingredients);
+    if (draft.instructions?.length) setInstructions(draft.instructions);
+    if (draft.tags?.length) setTags(draft.tags);
+    if (draft.calories) { setCalories(draft.calories); setShowNutrition(true); }
+    if (draft.protein) { setProtein(draft.protein); setShowNutrition(true); }
+    if (draft.carbs) { setCarbs(draft.carbs); setShowNutrition(true); }
+    if (draft.fat) { setFat(draft.fat); setShowNutrition(true); }
+    if (draft.fiber) { setFiber(draft.fiber); setShowNutrition(true); }
+    if (draft.sugar) { setSugar(draft.sugar); setShowNutrition(true); }
   };
 
   // Submit
@@ -847,6 +852,36 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
           )}
         </Button>
       </div>
+
+      {/* Draft restore prompt */}
+      <Modal
+        isOpen={showDraftPrompt}
+        onClose={() => {
+          localStorage.removeItem(DRAFT_KEY);
+          setPendingDraft(null);
+          setShowDraftPrompt(false);
+        }}
+        title="Unsaved Draft"
+        size="sm"
+      >
+        <p className="text-brown-light mb-6">You have an unsaved recipe draft. Would you like to continue editing it?</p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="ghost" onClick={() => {
+            localStorage.removeItem(DRAFT_KEY);
+            setPendingDraft(null);
+            setShowDraftPrompt(false);
+          }}>
+            Start Fresh
+          </Button>
+          <Button onClick={() => {
+            if (pendingDraft) restoreDraft(pendingDraft);
+            setPendingDraft(null);
+            setShowDraftPrompt(false);
+          }}>
+            Continue Editing
+          </Button>
+        </div>
+      </Modal>
     </form>
   );
 }

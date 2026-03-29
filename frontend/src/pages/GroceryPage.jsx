@@ -28,6 +28,7 @@ export default function GroceryPage() {
   const [newListName, setNewListName] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [copied, setCopied] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     fetchLists();
@@ -44,13 +45,8 @@ export default function GroceryPage() {
     }
   };
 
-  const handleDeleteList = async (listId) => {
-    if (!window.confirm('Delete this grocery list? This cannot be undone.')) return;
-    try {
-      await deleteList(listId);
-    } catch {
-      // Error handled in hook
-    }
+  const handleDeleteList = (listId) => {
+    setDeleteConfirm(listId);
   };
 
   const handleOpenList = async (listId) => {
@@ -290,6 +286,23 @@ export default function GroceryPage() {
           ))}
         </div>
       )}
+
+      {/* Delete list confirmation modal */}
+      <Modal
+        isOpen={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title="Delete List"
+        size="sm"
+      >
+        <p className="text-brown-light mb-6">Delete this grocery list? This cannot be undone.</p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button variant="danger" onClick={async () => {
+            try { await deleteList(deleteConfirm); } catch {}
+            setDeleteConfirm(null);
+          }}>Delete</Button>
+        </div>
+      </Modal>
 
       {/* New list modal */}
       <Modal
