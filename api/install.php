@@ -125,26 +125,30 @@ if ($method === 'POST') {
         exit;
     }
 
-    // Run schema
-    $schemaPath = __DIR__ . '/../database/schema.sql';
-    if (!file_exists($schemaPath)) {
-        http_response_code(500);
-        echo json_encode(['error' => 'schema.sql not found at database/schema.sql']);
-        exit;
-    }
+    // Run schema (skip if tables already exist — Docker entrypoint may have applied it)
+    $tablesExist = (int) $pdo->query(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbName' AND table_name='recipes'"
+    )->fetchColumn();
 
-    $schema = file_get_contents($schemaPath);
-    // Strip CREATE DATABASE and USE lines (DB already exists when connecting via PDO dbname)
-    $schema = preg_replace('/CREATE DATABASE.*?;/s', '', $schema);
-    $schema = preg_replace('/^USE\s+\w+;\s*/m', '', $schema);
-    try {
-        $pdo->exec($schema);
-    } catch (PDOException $e) {
-        // Tables might already exist — check if it's a "table exists" error
-        if (strpos($e->getMessage(), 'already exists') === false) {
+    if (!$tablesExist) {
+        $schemaPath = __DIR__ . '/../database/schema.sql';
+        if (!file_exists($schemaPath)) {
             http_response_code(500);
-            echo json_encode(['error' => 'Schema import failed: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'schema.sql not found at database/schema.sql']);
             exit;
+        }
+
+        $schema = file_get_contents($schemaPath);
+        $schema = preg_replace('/CREATE DATABASE.*?;/s', '', $schema);
+        $schema = preg_replace('/^USE\s+\w+;\s*/m', '', $schema);
+        try {
+            $pdo->exec($schema);
+        } catch (PDOException $e) {
+            if (strpos($e->getMessage(), 'already exists') === false) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Schema import failed: ' . $e->getMessage()]);
+                exit;
+            }
         }
     }
 
