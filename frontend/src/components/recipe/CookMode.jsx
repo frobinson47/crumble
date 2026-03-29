@@ -84,6 +84,7 @@ export default function CookMode({ steps, ingredients, onClose, recipeId, onDone
   const [activeTimers, setActiveTimers] = useState([]);
   const touchStartRef = useRef(null);
   const touchDiffRef = useRef(0);
+  const ingredientPanelRef = useRef(null);
   const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
 
   // Save progress when step changes
@@ -106,6 +107,40 @@ export default function CookMode({ steps, ingredients, onClose, recipeId, onDone
       document.body.style.overflow = '';
     };
   }, []);
+
+  // Focus trap for ingredient panel
+  useEffect(() => {
+    if (!showIngredients || !ingredientPanelRef.current) return;
+
+    const panel = ingredientPanelRef.current;
+    const focusableElements = panel.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements.length === 0) return;
+
+    const firstEl = focusableElements[0];
+    const lastEl = focusableElements[focusableElements.length - 1];
+
+    firstEl.focus();
+
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+
+    panel.addEventListener('keydown', handleTab);
+    return () => panel.removeEventListener('keydown', handleTab);
+  }, [showIngredients]);
 
   const [showDoneModal, setShowDoneModal] = useState(false);
   const [doneNotes, setDoneNotes] = useState('');
@@ -284,6 +319,9 @@ export default function CookMode({ steps, ingredients, onClose, recipeId, onDone
 
       {/* Ingredient slide-out panel */}
       <div
+        ref={ingredientPanelRef}
+        role="dialog"
+        aria-label="Ingredients"
         className={`
           absolute top-0 left-0 h-full w-80 max-w-[85vw]
           bg-cream shadow-2xl z-10

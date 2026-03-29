@@ -52,15 +52,8 @@ export default function Layout({ children }) {
           </div>
         )}
 
-        {/* Mobile Header */}
-        <div className="md:hidden">
-          <Header onSearch={handleSearch} />
-        </div>
-
-        {/* Desktop Header */}
-        <div className="hidden md:block">
-          <Header onSearch={handleSearch} />
-        </div>
+        {/* Header */}
+        <Header onSearch={handleSearch} />
 
         {/* Page content */}
         <main id="main-content" className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-6">

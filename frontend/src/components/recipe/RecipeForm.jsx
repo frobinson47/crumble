@@ -16,8 +16,8 @@ const UNIT_OPTIONS = [
   'can', 'bunch', 'head', 'sprig', 'dash', 'slice', 'stick', 'package',
 ];
 
-const emptyIngredient = () => ({ amount: '', unit: '', name: '' });
-const emptyStep = () => '';
+const emptyIngredient = (id) => ({ _key: id, amount: '', unit: '', name: '' });
+const emptyStep = (id) => ({ _key: id, text: '' });
 
 export default function RecipeForm({ initialData, onSubmit, isLoading, submitLabel = 'Save Recipe' }) {
   const [title, setTitle] = useState('');
@@ -26,8 +26,8 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
-  const [ingredients, setIngredients] = useState([emptyIngredient()]);
-  const [instructions, setInstructions] = useState([emptyStep()]);
+  const [ingredients, setIngredients] = useState(() => [emptyIngredient(1)]);
+  const [instructions, setInstructions] = useState(() => [emptyStep(2)]);
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [allTags, setAllTags] = useState([]);
@@ -51,6 +51,8 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const fileInputRef = useRef(null);
   const tagInputRef = useRef(null);
   const isInitializedRef = useRef(false);
+  const keyCounterRef = useRef(2); // starts at 2; initial items use keys 1 and 2
+  const nextKey = useCallback(() => ++keyCounterRef.current, []);
 
   // Draft auto-save (new recipes only, not edits)
   const DRAFT_KEY = 'cookslate-recipe-draft';
@@ -86,7 +88,9 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
           title, description, prepTime, cookTime, servings, sourceUrl,
-          ingredients, instructions, tags,
+          ingredients: ingredients.map(({ _key: _k, ...rest }) => rest),
+          instructions: instructions.map(s => s.text),
+          tags,
           calories, protein, carbs, fat, fiber, sugar,
           _savedAt: Date.now(),
         }));
@@ -115,6 +119,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
       if (initialData.ingredients && initialData.ingredients.length > 0) {
         setIngredients(initialData.ingredients.map(ing => ({
+          _key: nextKey(),
           amount: ing.amount || '',
           unit: ing.unit || '',
           name: ing.name || '',
@@ -123,7 +128,10 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
       if (initialData.instructions) {
         const steps = Array.isArray(initialData.instructions)
-          ? initialData.instructions.map(s => (typeof s === 'string' ? s : s.text || String(s)))
+          ? initialData.instructions.map(s => ({
+              _key: nextKey(),
+              text: typeof s === 'string' ? s : s.text || String(s),
+            }))
           : [];
         if (steps.length > 0) {
           setInstructions(steps);
@@ -168,7 +176,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
   // Ingredient handlers
   const addIngredient = () => {
-    setIngredients(prev => [...prev, emptyIngredient()]);
+    setIngredients(prev => [...prev, emptyIngredient(nextKey())]);
   };
 
   const removeIngredient = (index) => {
@@ -191,7 +199,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
   // Step handlers
   const addStep = () => {
-    setInstructions(prev => [...prev, emptyStep()]);
+    setInstructions(prev => [...prev, emptyStep(nextKey())]);
   };
 
   const removeStep = (index) => {
@@ -199,7 +207,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   };
 
   const updateStep = (index, value) => {
-    setInstructions(prev => prev.map((step, i) => i === index ? value : step));
+    setInstructions(prev => prev.map((step, i) => i === index ? { ...step, text: value } : step));
   };
 
   const moveStep = (index, direction) => {
@@ -268,13 +276,17 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
     if (parsed.servings) setServings(String(parsed.servings));
     if (parsed.ingredients.length > 0) {
       setIngredients(parsed.ingredients.map(ing => ({
+        _key: nextKey(),
         amount: ing.amount || '',
         unit: ing.unit || '',
         name: ing.name || '',
       })));
     }
     if (parsed.instructions.length > 0) {
-      setInstructions(parsed.instructions);
+      setInstructions(parsed.instructions.map(s => ({
+        _key: nextKey(),
+        text: typeof s === 'string' ? s : s.text || '',
+      })));
     }
     setPasteRecipeMode(false);
   };
@@ -287,8 +299,10 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
     if (draft.cookTime) setCookTime(draft.cookTime);
     if (draft.servings) setServings(draft.servings);
     if (draft.sourceUrl) setSourceUrl(draft.sourceUrl);
-    if (draft.ingredients?.length) setIngredients(draft.ingredients);
-    if (draft.instructions?.length) setInstructions(draft.instructions);
+    if (draft.ingredients?.length) setIngredients(draft.ingredients.map(i => ({ ...i, _key: nextKey() })));
+    if (draft.instructions?.length) setInstructions(
+      draft.instructions.map(s => ({ _key: nextKey(), text: typeof s === 'string' ? s : s.text || '' }))
+    );
     if (draft.tags?.length) setTags(draft.tags);
     if (draft.calories) { setCalories(draft.calories); setShowNutrition(true); }
     if (draft.protein) { setProtein(draft.protein); setShowNutrition(true); }
@@ -312,7 +326,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       newErrors.ingredients = 'At least one ingredient is required';
     }
 
-    const validSteps = instructions.filter(step => step.trim());
+    const validSteps = instructions.filter(step => step.text.trim());
     if (validSteps.length === 0) {
       newErrors.instructions = 'At least one instruction step is required';
     }
@@ -331,7 +345,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
         ...ing,
         sort_order: i,
       })),
-      instructions: validSteps,
+      instructions: validSteps.map(s => s.text),
       tags: tags,
       calories: calories ? parseInt(calories, 10) : null,
       protein: protein.trim() || null,
@@ -508,7 +522,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
         <div className="space-y-2">
           {ingredients.map((ing, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={ing._key} className="flex items-center gap-2">
               {/* Reorder buttons */}
               <div className="flex flex-col shrink-0">
                 <button
@@ -581,7 +595,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
                     }
                     // Auto-add new row and focus it
                     if (text) {
-                      setIngredients(prev => [...prev, emptyIngredient()]);
+                      setIngredients(prev => [...prev, emptyIngredient(nextKey())]);
                       setTimeout(() => {
                         const inputs = document.querySelectorAll('input[placeholder="Ingredient name"]');
                         inputs[inputs.length - 1]?.focus();
@@ -626,6 +640,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
                       // Remove empty trailing ingredient if it's the only one
                       const filtered = prev.filter(ing => ing.name.trim() || ing.amount);
                       return [...filtered, ...parsed.map(p => ({
+                        _key: nextKey(),
                         amount: p.amount || '',
                         unit: p.unit || '',
                         name: p.name || '',
@@ -673,7 +688,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
         <div className="space-y-3">
           {instructions.map((step, index) => (
-            <div key={index} className="flex items-start gap-2">
+            <div key={step._key} className="flex items-start gap-2">
               {/* Reorder buttons */}
               <div className="flex flex-col shrink-0 mt-2">
                 <button
@@ -703,7 +718,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
 
               {/* Step text */}
               <textarea
-                value={step}
+                value={step.text}
                 onChange={(e) => updateStep(index, e.target.value)}
                 placeholder={`Step ${index + 1}...`}
                 rows={2}
