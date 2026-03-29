@@ -22,6 +22,7 @@ const MealPlanPage = lazy(() => import('./pro/pages/MealPlanPage'));
 const StatsPage = lazy(() => import('./pro/pages/StatsPage'));
 import SharedRecipePage from './pages/SharedRecipePage';
 import SettingsPage from './pages/SettingsPage';
+import InstallPage from './pages/InstallPage';
 
 function ProRoute({ children }) {
   const { active, loading } = useLicense();
@@ -38,6 +39,7 @@ export default function App() {
         <ErrorBoundary>
         <Routes>
           {/* Public routes */}
+          <Route path="/install" element={<InstallPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/shared/:token" element={<SharedRecipePage />} />
 

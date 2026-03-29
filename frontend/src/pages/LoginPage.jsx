@@ -20,6 +20,19 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Check if app needs initial setup (install wizard)
+    fetch('/api/install.php')
+      .then(r => {
+        if (r.ok) {
+          // Install endpoint is accessible and returned requirements — needs setup
+          navigate('/install', { replace: true });
+        }
+        // 403 = already installed, continue to login
+      })
+      .catch(() => {
+        // Install endpoint not available, continue to login
+      });
+
     // Check if SSO is configured
     api.getSsoConfig()
       .then(data => setSsoEnabled(data.enabled))
@@ -30,7 +43,7 @@ export default function LoginPage() {
     if (oauthError) {
       setError(oauthError);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
