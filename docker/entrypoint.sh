@@ -27,9 +27,9 @@ DB_PORT=${DB_PORT:-3306}
 DB_NAME=${DB_NAME:-cookslate_db}
 DB_USER=${DB_USER:-cookslate}
 DB_PASS=${DB_PASS:-cookslate}
-CORS_ORIGINS=http://localhost:8080
-APP_ENV=production
-APP_URL=http://localhost:8080
+CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080}
+APP_ENV=${APP_ENV:-development}
+APP_URL=${APP_URL:-http://localhost:8080}
 ENVEOF
 fi
 
