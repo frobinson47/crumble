@@ -79,6 +79,8 @@ class GroceryController {
     /**
      * POST /grocery/{listId}/items
      * Add a single item. Expects JSON: { name, amount?, unit? }
+     * If only name is provided and it contains an amount/unit (e.g., "2 cups flour"),
+     * it will be automatically parsed into structured fields.
      */
     public function addItem(int $listId): array {
         $userId = Auth::requireAuth();
@@ -96,13 +98,24 @@ class GroceryController {
             return ['error' => 'Item name is required', 'code' => 400];
         }
 
+        $name = $input['name'];
+        $amount = $input['amount'] ?? null;
+        $unit = $input['unit'] ?? null;
+
+        // Smart parse: if no amount/unit provided, try to extract from name
+        if ($amount === null && $unit === null) {
+            require_once __DIR__ . '/../services/IngredientParser.php';
+            $parser = new IngredientParser();
+            $parsed = $parser->parse($name);
+            if ($parsed['amount'] !== null && $parsed['name'] !== '') {
+                $amount = $parsed['amount'];
+                $unit = $parsed['unit'];
+                $name = $parsed['name'];
+            }
+        }
+
         $itemModel = new GroceryItem();
-        $item = $itemModel->create(
-            $listId,
-            $input['name'],
-            $input['amount'] ?? null,
-            $input['unit'] ?? null
-        );
+        $item = $itemModel->create($listId, $name, $amount, $unit);
 
         http_response_code(201);
         return $item;
@@ -157,6 +170,25 @@ class GroceryController {
 
         $itemModel->delete($itemId);
         return ['message' => 'Item deleted successfully'];
+    }
+
+    /**
+     * DELETE /grocery/{listId}/checked
+     * Remove all checked items from a list.
+     */
+    public function clearChecked(int $listId): array {
+        $userId = Auth::requireAuth();
+        $listModel = new GroceryList();
+
+        if (!$listModel->isOwner($listId, $userId)) {
+            http_response_code(403);
+            return ['error' => 'Access denied', 'code' => 403];
+        }
+
+        $itemModel = new GroceryItem();
+        $removed = $itemModel->clearChecked($listId);
+
+        return ['removed' => $removed];
     }
 
     /**

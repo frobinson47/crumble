@@ -113,6 +113,21 @@ export function useGrocery() {
     }
   }, []);
 
+  const clearChecked = useCallback(async (listId) => {
+    setError(null);
+    try {
+      const data = await api.clearCheckedItems(listId);
+      setCurrentList(prev => {
+        if (!prev || prev.id !== listId) return prev;
+        return { ...prev, items: (prev.items || []).filter(item => !item.checked) };
+      });
+      return data.removed || 0;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
   const addRecipeToList = useCallback(async (listId, recipeId) => {
     setError(null);
     try {
@@ -138,6 +153,7 @@ export function useGrocery() {
     addItem,
     updateItem,
     removeItem,
+    clearChecked,
     addRecipeToList,
   };
 }

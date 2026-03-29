@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../services/UnitConverter.php';
 
 class GroceryItem {
     private PDO $db;
@@ -89,6 +90,15 @@ class GroceryItem {
     }
 
     /**
+     * Delete all checked items from a grocery list.
+     */
+    public function clearChecked(int $listId): int {
+        $stmt = $this->db->prepare('DELETE FROM grocery_items WHERE list_id = ? AND checked = 1');
+        $stmt->execute([$listId]);
+        return $stmt->rowCount();
+    }
+
+    /**
      * Bulk add all ingredients from a recipe to a grocery list.
      * If an item with the same name already exists, combine amounts when units match.
      */
@@ -114,12 +124,29 @@ class GroceryItem {
 
             if (isset($existingByName[$key])) {
                 $existing = $existingByName[$key];
-                // Combine amounts if units match
-                if ($existing['unit'] === $ingredient['unit'] && is_numeric($existing['amount']) && is_numeric($ingredient['amount'])) {
-                    $newAmount = (string)((float)$existing['amount'] + (float)$ingredient['amount']);
-                    $this->update($existing['id'], ['amount' => $newAmount]);
+                $existingVal = UnitConverter::parseAmount($existing['amount']);
+                $newVal = UnitConverter::parseAmount($ingredient['amount']);
+
+                if ($existingVal !== null && $newVal !== null) {
+                    if ($existing['unit'] === $ingredient['unit']) {
+                        // Same unit — simple addition
+                        $newAmount = UnitConverter::formatAmount($existingVal + $newVal);
+                        $this->update($existing['id'], ['amount' => $newAmount]);
+                    } elseif (UnitConverter::canConvert($existing['unit'], $ingredient['unit'])) {
+                        // Compatible units — convert new ingredient to existing unit, then add
+                        $convertedVal = UnitConverter::convert($newVal, $ingredient['unit'], $existing['unit']);
+                        if ($convertedVal !== null) {
+                            $total = $existingVal + $convertedVal;
+                            // Pick the best display unit for the combined amount
+                            $measureType = UnitConverter::getMeasureType($existing['unit']);
+                            $baseAmount = UnitConverter::convert($total, $existing['unit'], $measureType === 'volume' ? 'tsp' : 'g');
+                            $best = UnitConverter::bestUnit($baseAmount, $existing['unit'], $measureType);
+                            $newAmount = UnitConverter::formatAmount($best['amount']);
+                            $this->update($existing['id'], ['amount' => $newAmount, 'unit' => $best['unit']]);
+                        }
+                    }
                 }
-                // If units don't match or amounts aren't numeric, skip combining (item already exists)
+                // If units aren't convertible or amounts aren't parseable, skip combining (item already exists)
             } else {
                 $newItem = $this->create($listId, $ingredient['name'], $ingredient['amount'], $ingredient['unit'], $recipeId);
                 $existingByName[$key] = $newItem;

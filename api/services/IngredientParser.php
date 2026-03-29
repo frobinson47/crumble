@@ -69,6 +69,22 @@ class IngredientParser {
             return ['amount' => null, 'unit' => null, 'name' => ''];
         }
 
+        // Normalize unicode fractions to ASCII equivalents
+        // Insert space before fraction when preceded by a digit (e.g., "1½" → "1 1/2")
+        $unicodeFractions = [
+            '½' => '1/2', '⅓' => '1/3', '⅔' => '2/3',
+            '¼' => '1/4', '¾' => '3/4', '⅕' => '1/5',
+            '⅖' => '2/5', '⅗' => '3/5', '⅘' => '4/5',
+            '⅙' => '1/6', '⅚' => '5/6', '⅛' => '1/8',
+            '⅜' => '3/8', '⅝' => '5/8', '⅞' => '7/8',
+        ];
+        $text = preg_replace_callback(
+            '/(\d)([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/u',
+            fn($m) => $m[1] . ' ' . $unicodeFractions[$m[2]],
+            $text
+        );
+        $text = strtr($text, $unicodeFractions);
+
         // Normalize whitespace
         $text = preg_replace('/\s+/', ' ', $text);
 

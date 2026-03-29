@@ -26,7 +26,7 @@ export default function Input({
           className={`
             w-full px-4 py-2.5 rounded-xl
             border border-cream-dark
-            bg-white text-brown
+            bg-surface text-brown
             placeholder:text-warm-gray
             focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta
             transition-colors duration-200
@@ -43,7 +43,7 @@ export default function Input({
           className={`
             w-full px-4 py-2.5 rounded-xl
             border border-cream-dark
-            bg-white text-brown
+            bg-surface text-brown
             placeholder:text-warm-gray
             focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta
             transition-colors duration-200

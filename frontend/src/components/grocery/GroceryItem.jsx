@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 
 export default function GroceryItem({ item, onToggle, onDelete }) {
@@ -25,7 +26,16 @@ export default function GroceryItem({ item, onToggle, onDelete }) {
           {item.unit && <span>{item.unit} </span>}
           {item.name}
         </span>
-        {item.recipe_title && (
+        {item.recipe_title && item.recipe_id && (
+          <Link
+            to={`/recipe/${item.recipe_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-warm-gray hover:text-terracotta ml-2 transition-colors"
+          >
+            from {item.recipe_title}
+          </Link>
+        )}
+        {item.recipe_title && !item.recipe_id && (
           <span className="text-xs text-warm-gray ml-2">
             from {item.recipe_title}
           </span>
@@ -34,7 +44,7 @@ export default function GroceryItem({ item, onToggle, onDelete }) {
 
       <button
         onClick={() => onDelete(item.id)}
-        className="p-2 text-warm-gray opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all duration-200 min-w-[36px] min-h-[36px] flex items-center justify-center md:opacity-0 md:group-hover:opacity-100"
+        className="p-2 text-warm-gray opacity-60 hover:text-red-500 transition-all duration-200 min-w-[36px] min-h-[36px] flex items-center justify-center md:opacity-0 md:group-hover:opacity-100"
         aria-label="Delete item"
       >
         <Trash2 size={16} />

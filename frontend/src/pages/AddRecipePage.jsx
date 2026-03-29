@@ -4,15 +4,21 @@ import { BookOpen, Link2 } from 'lucide-react';
 import RecipeForm from '../components/recipe/RecipeForm';
 import ImportForm from '../components/recipe/ImportForm';
 import useRecipes from '../hooks/useRecipes';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function AddRecipePage() {
+  useDocumentTitle('Add Recipe');
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { createRecipe, importRecipe, isLoading } = useRecipes();
   const [mode, setMode] = useState('choose'); // 'choose', 'manual', 'import'
   const [importedData, setImportedData] = useState(null);
 
-  // Handle bulk import review redirect
+  // Handle URL param for quick import (paste shortcut or direct link)
+  const urlParam = searchParams.get('url') || '';
+
+  // Handle bulk import review redirect or URL param
   useEffect(() => {
     if (searchParams.get('review') === 'bulk') {
       const stored = sessionStorage.getItem('bulkImportReview');
@@ -21,8 +27,10 @@ export default function AddRecipePage() {
         setMode('manual');
         sessionStorage.removeItem('bulkImportReview');
       }
+    } else if (urlParam) {
+      setMode('import');
     }
-  }, [searchParams]);
+  }, [searchParams, urlParam]);
 
   const handleSubmit = async (data, imageFile) => {
     try {
@@ -67,6 +75,12 @@ export default function AddRecipePage() {
       }),
       instructions: parsed.instructions || [],
       tags: parsed.tags || [],
+      calories: parsed.calories || '',
+      protein: parsed.protein || '',
+      carbs: parsed.carbs || '',
+      fat: parsed.fat || '',
+      fiber: parsed.fiber || '',
+      sugar: parsed.sugar || '',
     });
     setMode('manual');
   };
@@ -79,7 +93,7 @@ export default function AddRecipePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={() => setMode('import')}
-            className="flex flex-col items-center gap-3 p-8 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
+            className="flex flex-col items-center gap-3 p-8 bg-surface rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
           >
             <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20 transition-colors duration-200">
               <Link2 size={28} className="text-terracotta" />
@@ -94,7 +108,7 @@ export default function AddRecipePage() {
 
           <button
             onClick={() => setMode('manual')}
-            className="flex flex-col items-center gap-3 p-8 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
+            className="flex flex-col items-center gap-3 p-8 bg-surface rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
           >
             <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center group-hover:bg-sage/20 transition-colors duration-200">
               <BookOpen size={28} className="text-sage" />
@@ -128,6 +142,7 @@ export default function AddRecipePage() {
           onImportSuccess={handleImportSuccess}
           onImport={importRecipe}
           isLoading={isLoading}
+          initialUrl={urlParam}
         />
 
         <div className="text-center">
@@ -165,7 +180,7 @@ export default function AddRecipePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-md p-6">
+      <div className="bg-surface rounded-2xl shadow-md p-6">
         <RecipeForm
           initialData={importedData}
           onSubmit={handleSubmit}

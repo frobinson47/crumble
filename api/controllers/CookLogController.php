@@ -16,6 +16,18 @@ class CookLogController {
     public function history(): array {
         $userId = Auth::requireAuth();
         $model = new CookLog();
-        return ['history' => $model->getByUser($userId)];
+        return ['history' => $model->getByUser($userId, 100)];
+    }
+
+    public function recipeHistory(int $recipeId): array {
+        $userId = Auth::requireAuth();
+        $model = new CookLog();
+        return ['history' => $model->getByRecipe($userId, $recipeId)];
+    }
+
+    public function forgottenFavorites(): array {
+        $userId = Auth::requireAuth();
+        $model = new CookLog();
+        return ['recipes' => $model->getForgottenFavorites($userId)];
     }
 }

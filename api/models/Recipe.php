@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../services/AutoTagger.php';
 
 class Recipe {
     private PDO $db;
@@ -18,9 +19,15 @@ class Recipe {
         $params = [];
 
         if ($search !== null && $search !== '') {
-            $where[] = 'MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE)';
-            // Append wildcard for partial matching
+            // Search across title, description, ingredients, and tags
+            $where[] = '(
+                MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE)
+                OR EXISTS (SELECT 1 FROM ingredients i WHERE i.recipe_id = r.id AND i.name LIKE ?)
+                OR EXISTS (SELECT 1 FROM recipe_tags rt2 INNER JOIN tags t2 ON rt2.tag_id = t2.id WHERE rt2.recipe_id = r.id AND t2.name LIKE ?)
+            )';
             $params[] = $search . '*';
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
         }
 
         if ($tag !== null && $tag !== '') {
@@ -47,20 +54,33 @@ class Recipe {
         $offset = ($page - 1) * $perPage;
         $userId = $_SESSION['user_id'] ?? null;
 
+        // When searching, order by relevance (title/desc matches first, then ingredient/tag matches)
+        // When not searching, order by newest first
+        $relevanceSelect = '';
+        $orderBy = 'r.created_at DESC';
+        $orderParams = [];
+        if ($search !== null && $search !== '') {
+            $relevanceSelect = ', MATCH(r.title, r.description) AGAINST(? IN BOOLEAN MODE) AS relevance';
+            $orderParams[] = $search . '*';
+            $orderBy = 'relevance DESC, r.created_at DESC';
+        }
+
         $sql = "
             SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
                    r.image_path, r.created_at, r.updated_at, r.created_by,
                    u.username AS author,
                    (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id = r.id) AS ingredient_count,
                    (SELECT ROUND(AVG(rt.score), 1) FROM ratings rt WHERE rt.recipe_id = r.id) AS avg_rating,
-                   (SELECT COUNT(*) FROM favorites f WHERE f.recipe_id = r.id) AS favorite_count
+                   (SELECT COUNT(*) FROM favorites f WHERE f.recipe_id = r.id) AS favorite_count,
+                   COALESCE(JSON_LENGTH(r.instructions), 0) AS step_count
+                   $relevanceSelect
             FROM recipes r
             LEFT JOIN users u ON r.created_by = u.id
             $whereClause
-            ORDER BY r.created_at DESC
+            ORDER BY $orderBy
             LIMIT ? OFFSET ?
         ";
-        $allParams = array_merge($params, [$perPage, $offset]);
+        $allParams = array_merge($params, $orderParams, [$perPage, $offset]);
         $stmt = $this->db->prepare($sql);
         $stmt->execute($allParams);
         $recipes = $stmt->fetchAll();
@@ -88,17 +108,26 @@ class Recipe {
                 ];
             }
 
-            // Add user-specific favorite status
+            // Add user-specific favorite status and cook counts
             if ($userId) {
                 $favSql = "SELECT recipe_id FROM favorites WHERE user_id = ? AND recipe_id IN ($placeholders)";
                 $favStmt = $this->db->prepare($favSql);
                 $favStmt->execute(array_merge([$userId], $ids));
                 $favSet = array_flip(array_column($favStmt->fetchAll(), 'recipe_id'));
+
+                $cookSql = "SELECT recipe_id, COUNT(*) AS cnt FROM cook_log WHERE user_id = ? AND recipe_id IN ($placeholders) GROUP BY recipe_id";
+                $cookStmt = $this->db->prepare($cookSql);
+                $cookStmt->execute(array_merge([$userId], $ids));
+                $cookCounts = [];
+                foreach ($cookStmt->fetchAll() as $row) {
+                    $cookCounts[$row['recipe_id']] = (int) $row['cnt'];
+                }
             }
 
             foreach ($recipes as &$recipe) {
                 $recipe['tags'] = $tagMap[$recipe['id']] ?? [];
                 $recipe['is_favorited'] = isset($favSet[$recipe['id']]);
+                $recipe['cook_count'] = $cookCounts[$recipe['id']] ?? 0;
                 $recipe['avg_rating'] = $recipe['avg_rating'] !== null ? (float) $recipe['avg_rating'] : null;
                 $recipe['favorite_count'] = (int) $recipe['favorite_count'];
             }
@@ -231,9 +260,16 @@ class Recipe {
                 }
             }
 
+            // Auto-tag: suggest tags based on recipe content, merge with provided tags
+            $autoTagger = new AutoTagger();
+            $suggestedTags = $autoTagger->suggest($data);
+            $existingTags = array_map('strtolower', array_map('trim', $data['tags'] ?? []));
+            $allTags = array_unique(array_merge($existingTags, $suggestedTags));
+            $allTags = array_filter($allTags, fn($t) => $t !== '');
+
             // Sync tags
-            if (!empty($data['tags'])) {
-                foreach ($data['tags'] as $tagName) {
+            if (!empty($allTags)) {
+                foreach ($allTags as $tagName) {
                     $tagName = trim($tagName);
                     if ($tagName === '') continue;
 
@@ -380,58 +416,64 @@ class Recipe {
     }
 
     /**
-     * Get a featured recipe (highest rated with image, or most recent with image).
+     * Get a featured recipe — rotates daily from top-rated recipes with images.
+     * Uses the day of year as a seed for deterministic daily rotation.
      */
     public function getFeatured(): ?array {
-        // Try highest rated with image first
+        // Get top candidates: rated recipes with images, or recent with images
         $stmt = $this->db->prepare('
             SELECT r.id, r.title, r.description, r.image_path, r.prep_time, r.cook_time, r.servings,
-                   ROUND(AVG(rt.score), 1) AS avg_rating
+                   COALESCE(ROUND(AVG(rt.score), 1), 0) AS avg_rating
             FROM recipes r
-            INNER JOIN ratings rt ON rt.recipe_id = r.id
+            LEFT JOIN ratings rt ON rt.recipe_id = r.id
             WHERE r.image_path IS NOT NULL AND r.image_path != ""
             GROUP BY r.id
             ORDER BY avg_rating DESC, r.created_at DESC
-            LIMIT 1
+            LIMIT 10
         ');
         $stmt->execute();
-        $recipe = $stmt->fetch();
+        $candidates = $stmt->fetchAll();
 
-        if (!$recipe) {
-            // Fallback: most recent with image
-            $stmt = $this->db->prepare('
-                SELECT id, title, description, image_path, prep_time, cook_time, servings
-                FROM recipes
-                WHERE image_path IS NOT NULL AND image_path != ""
-                ORDER BY created_at DESC
-                LIMIT 1
-            ');
-            $stmt->execute();
-            $recipe = $stmt->fetch();
+        if (empty($candidates)) {
+            return null;
         }
 
-        return $recipe ?: null;
+        // Pick one deterministically based on the day
+        $dayOfYear = (int) date('z');
+        $index = $dayOfYear % count($candidates);
+        return $candidates[$index];
     }
 
     /**
-     * Get related recipes by shared tags.
+     * Get related recipes by shared tags and ingredient overlap.
+     * Scoring: (shared_tags * 3) + shared_ingredients
      */
-    public function getRelated(int $recipeId, int $limit = 4): array {
+    public function getRelated(int $recipeId, int $limit = 6): array {
         $stmt = $this->db->prepare('
-            SELECT DISTINCT r.id, r.title, r.image_path, r.prep_time, r.cook_time, r.servings,
-                   COUNT(rt2.tag_id) AS shared_tags,
+            SELECT r.id, r.title, r.image_path, r.prep_time, r.cook_time, r.servings,
+                   COALESCE(tag_score.shared_tags, 0) AS shared_tags,
+                   COALESCE(ing_score.shared_ingredients, 0) AS shared_ingredients,
+                   (COALESCE(tag_score.shared_tags, 0) * 3 + COALESCE(ing_score.shared_ingredients, 0)) AS relevance,
                    (SELECT ROUND(AVG(score), 1) FROM ratings WHERE recipe_id = r.id) AS avg_rating
             FROM recipes r
-            INNER JOIN recipe_tags rt2 ON rt2.recipe_id = r.id
-            WHERE rt2.tag_id IN (
-                SELECT tag_id FROM recipe_tags WHERE recipe_id = ?
-            )
-            AND r.id != ?
-            GROUP BY r.id
-            ORDER BY shared_tags DESC, r.created_at DESC
+            LEFT JOIN (
+                SELECT rt2.recipe_id, COUNT(rt2.tag_id) AS shared_tags
+                FROM recipe_tags rt2
+                WHERE rt2.tag_id IN (SELECT tag_id FROM recipe_tags WHERE recipe_id = ?)
+                GROUP BY rt2.recipe_id
+            ) tag_score ON tag_score.recipe_id = r.id
+            LEFT JOIN (
+                SELECT i2.recipe_id, COUNT(DISTINCT LOWER(i2.name)) AS shared_ingredients
+                FROM ingredients i2
+                WHERE LOWER(i2.name) IN (SELECT DISTINCT LOWER(name) FROM ingredients WHERE recipe_id = ?)
+                GROUP BY i2.recipe_id
+            ) ing_score ON ing_score.recipe_id = r.id
+            WHERE r.id != ?
+            AND (COALESCE(tag_score.shared_tags, 0) > 0 OR COALESCE(ing_score.shared_ingredients, 0) > 0)
+            ORDER BY relevance DESC, r.created_at DESC
             LIMIT ?
         ');
-        $stmt->execute([$recipeId, $recipeId, $limit]);
+        $stmt->execute([$recipeId, $recipeId, $recipeId, $limit]);
         return $stmt->fetchAll();
     }
 
@@ -442,5 +484,162 @@ class Recipe {
         $stmt = $this->db->prepare('SELECT 1 FROM recipes WHERE id = ? AND created_by = ?');
         $stmt->execute([$recipeId, $userId]);
         return (bool) $stmt->fetch();
+    }
+
+    /**
+     * Find recipes by matching ingredient names.
+     * Returns recipes ranked by how many of the provided ingredients match.
+     */
+    public function findByIngredients(array $ingredients, int $limit = 20): array {
+        $ingredients = array_filter(array_map('trim', $ingredients), fn($s) => strlen($s) >= 2);
+        if (empty($ingredients)) return [];
+
+        // Build CASE expressions for each search ingredient
+        $cases = [];
+        $params = [];
+        foreach ($ingredients as $ing) {
+            $cases[] = "MAX(CASE WHEN i.name LIKE ? THEN 1 ELSE 0 END)";
+            $params[] = '%' . $ing . '%';
+        }
+        $matchExpr = implode(' + ', $cases);
+
+        // Pantry staples excluded from total count (everyone has these)
+        $staples = ['salt', 'pepper', 'black pepper', 'water', 'oil', 'olive oil',
+                     'vegetable oil', 'cooking spray', 'butter', 'sugar', 'flour',
+                     'kosher salt', 'sea salt', 'cooking oil', 'nonstick spray'];
+        $staplePlaceholders = implode(',', array_fill(0, count($staples), '?'));
+
+        $userId = $_SESSION['user_id'] ?? null;
+
+        $sql = "
+            SELECT r.id, r.title, r.description, r.image_path,
+                   r.prep_time, r.cook_time, r.servings,
+                   ($matchExpr) AS matched,
+                   COUNT(i.id) AS total_ingredients,
+                   (SELECT COUNT(*) FROM ingredients i2
+                    WHERE i2.recipe_id = r.id
+                    AND LOWER(i2.name) NOT IN ($staplePlaceholders)
+                   ) AS countable_ingredients
+            FROM recipes r
+            JOIN ingredients i ON i.recipe_id = r.id
+            GROUP BY r.id
+            HAVING matched > 0
+            ORDER BY matched DESC,
+                     (matched / GREATEST(countable_ingredients, 1)) DESC
+            LIMIT ?
+        ";
+
+        $allParams = array_merge($params, $staples, [$limit]);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($allParams);
+        $recipes = $stmt->fetchAll();
+
+        // Attach tags and favorites (batch)
+        if (!empty($recipes)) {
+            $ids = array_column($recipes, 'id');
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+            $tagSql = "SELECT rt.recipe_id, t.name AS tag_name FROM recipe_tags rt
+                       INNER JOIN tags t ON rt.tag_id = t.id
+                       WHERE rt.recipe_id IN ($placeholders)";
+            $tagStmt = $this->db->prepare($tagSql);
+            $tagStmt->execute($ids);
+            $tagMap = [];
+            foreach ($tagStmt->fetchAll() as $row) {
+                $tagMap[$row['recipe_id']][] = ['name' => $row['tag_name']];
+            }
+
+            if ($userId) {
+                $favSql = "SELECT recipe_id FROM favorites WHERE user_id = ? AND recipe_id IN ($placeholders)";
+                $favStmt = $this->db->prepare($favSql);
+                $favStmt->execute(array_merge([$userId], $ids));
+                $favSet = array_flip(array_column($favStmt->fetchAll(), 'recipe_id'));
+            }
+
+            foreach ($recipes as &$recipe) {
+                $recipe['tags'] = $tagMap[$recipe['id']] ?? [];
+                $recipe['is_favorited'] = isset($favSet[$recipe['id']]);
+                $recipe['matched'] = (int) $recipe['matched'];
+                $recipe['total_ingredients'] = (int) $recipe['total_ingredients'];
+                $recipe['countable_ingredients'] = (int) $recipe['countable_ingredients'];
+            }
+            unset($recipe);
+        }
+
+        return $recipes;
+    }
+
+    /**
+     * Export all recipes with ingredients and tags for data portability.
+     * Returns a clean array suitable for JSON export.
+     */
+    public function exportAll(): array {
+        $stmt = $this->db->query('
+            SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
+                   r.source_url, r.image_path, r.instructions,
+                   r.calories, r.protein, r.carbs, r.fat, r.fiber, r.sugar,
+                   r.created_at, r.updated_at
+            FROM recipes r
+            ORDER BY r.id ASC
+        ');
+        $recipes = $stmt->fetchAll();
+
+        // Batch-fetch all ingredients and tags
+        $allIngredients = [];
+        $ingStmt = $this->db->query('SELECT recipe_id, name, amount, unit, sort_order FROM ingredients ORDER BY recipe_id, sort_order');
+        foreach ($ingStmt->fetchAll() as $ing) {
+            $allIngredients[$ing['recipe_id']][] = [
+                'name' => $ing['name'],
+                'amount' => $ing['amount'],
+                'unit' => $ing['unit'],
+                'sort_order' => (int) $ing['sort_order'],
+            ];
+        }
+
+        $allTags = [];
+        $tagStmt = $this->db->query('
+            SELECT rt.recipe_id, t.name
+            FROM recipe_tags rt
+            INNER JOIN tags t ON rt.tag_id = t.id
+            ORDER BY rt.recipe_id, t.name
+        ');
+        foreach ($tagStmt->fetchAll() as $tag) {
+            $allTags[$tag['recipe_id']][] = $tag['name'];
+        }
+
+        // Assemble export data
+        foreach ($recipes as &$recipe) {
+            $id = $recipe['id'];
+            if (is_string($recipe['instructions'])) {
+                $recipe['instructions'] = json_decode($recipe['instructions'], true);
+            }
+            $recipe['ingredients'] = $allIngredients[$id] ?? [];
+            $recipe['tags'] = $allTags[$id] ?? [];
+            // Cast numeric fields
+            foreach (['prep_time', 'cook_time', 'servings', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar'] as $field) {
+                $recipe[$field] = $recipe[$field] !== null ? (int) $recipe[$field] : null;
+            }
+            $recipe['id'] = (int) $recipe['id'];
+            unset($recipe['image_path']); // Internal path, not useful for export
+        }
+
+        return $recipes;
+    }
+
+    /**
+     * Get recipes the user owns but has never cooked.
+     */
+    public function getUncooked(int $userId, int $limit = 3): array {
+        $stmt = $this->db->prepare('
+            SELECT r.id, r.title, r.image_path, r.prep_time, r.cook_time
+            FROM recipes r
+            LEFT JOIN cook_log cl ON cl.recipe_id = r.id AND cl.user_id = ?
+            WHERE r.created_by = ?
+              AND cl.id IS NULL
+            ORDER BY RAND()
+            LIMIT ?
+        ');
+        $stmt->execute([$userId, $userId, $limit]);
+        return $stmt->fetchAll();
     }
 }

@@ -4,8 +4,8 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Spinner from '../ui/Spinner';
 
-export default function ImportForm({ onImportSuccess, isLoading, onImport }) {
-  const [url, setUrl] = useState('');
+export default function ImportForm({ onImportSuccess, isLoading, onImport, initialUrl = '' }) {
+  const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -35,7 +35,7 @@ export default function ImportForm({ onImportSuccess, isLoading, onImport }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6">
+    <div className="bg-surface rounded-2xl shadow-md p-6">
       <h3 className="text-lg font-bold text-brown mb-4 flex items-center gap-2">
         <Link2 size={20} className="text-terracotta" />
         Import from URL

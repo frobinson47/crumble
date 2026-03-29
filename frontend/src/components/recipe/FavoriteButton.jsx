@@ -34,7 +34,7 @@ export default function FavoriteButton({ recipeId, initialFavorited = false, siz
       className={`
         flex items-center justify-center transition-all duration-200 min-w-[44px] min-h-[44px]
         ${overlay
-          ? 'absolute top-2 right-2 z-10 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm'
+          ? 'absolute top-2 right-2 z-10 p-2 rounded-full bg-surface/80 backdrop-blur-sm hover:bg-surface shadow-sm'
           : 'p-2 rounded-xl hover:bg-cream-dark'
         }
         ${favorited ? 'text-red-500' : 'text-warm-gray hover:text-red-400'}

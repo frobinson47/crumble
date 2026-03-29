@@ -11,7 +11,7 @@ export default function GroceryList({ list, onClick, onDelete }) {
   return (
     <button
       onClick={() => onClick(list.id)}
-      className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 text-left group"
+      className="w-full flex items-center gap-4 p-4 bg-surface rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 text-left group"
     >
       <div className="shrink-0 w-12 h-12 rounded-xl bg-sage-light/30 flex items-center justify-center">
         <ShoppingCart size={22} className="text-sage" />

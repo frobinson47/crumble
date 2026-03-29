@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import * as api from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function formatRecipeData(parsed) {
   return {
@@ -34,6 +35,8 @@ function formatRecipeData(parsed) {
 }
 
 export default function BulkImportPage() {
+  useDocumentTitle('Bulk Import');
+
   const navigate = useNavigate();
   const [mode, setMode] = useState('choose'); // 'choose', 'urls', 'file'
   const [urlText, setUrlText] = useState('');
@@ -173,7 +176,7 @@ export default function BulkImportPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={() => setMode('urls')}
-            className="flex flex-col items-center gap-3 p-8 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
+            className="flex flex-col items-center gap-3 p-8 bg-surface rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
           >
             <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20 transition-colors duration-200">
               <Link2 size={28} className="text-terracotta" />
@@ -188,7 +191,7 @@ export default function BulkImportPage() {
 
           <button
             onClick={() => setMode('file')}
-            className="flex flex-col items-center gap-3 p-8 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
+            className="flex flex-col items-center gap-3 p-8 bg-surface rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 group"
           >
             <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center group-hover:bg-sage/20 transition-colors duration-200">
               <FileUp size={28} className="text-sage" />
@@ -219,7 +222,7 @@ export default function BulkImportPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
+        <div className="bg-surface rounded-2xl shadow-md p-6 space-y-4">
           <label className="block text-sm font-semibold text-brown">
             Paste recipe URLs (one per line)
           </label>
@@ -272,7 +275,7 @@ export default function BulkImportPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
+        <div className="bg-surface rounded-2xl shadow-md p-6 space-y-4">
           <p className="text-brown-light text-sm">
             Upload an export file from Mealie (.zip) or Paprika (.paprikarecipes).
           </p>
@@ -365,7 +368,7 @@ export default function BulkImportPage() {
         {results.map((item, index) => (
           <div
             key={index}
-            className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-4 ${
+            className={`bg-surface rounded-xl shadow-sm p-4 flex items-center gap-4 ${
               item.saved ? 'opacity-60' : ''
             }`}
           >

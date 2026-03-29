@@ -3,8 +3,11 @@ import { Heart } from 'lucide-react';
 import RecipeCard from '../components/recipe/RecipeCard';
 import { RecipeCardSkeleton } from '../components/ui/Skeleton';
 import * as api from '../services/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function FavoritesPage() {
+  useDocumentTitle('Favorites');
+
   const [recipes, setRecipes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,7 +29,7 @@ export default function FavoritesPage() {
           ))}
         </div>
       ) : recipes.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl shadow-md">
+        <div className="text-center py-12 bg-surface rounded-2xl shadow-md">
           <Heart size={48} className="mx-auto text-warm-gray mb-3" />
           <p className="text-lg text-warm-gray">No favorites yet!</p>
           <p className="text-sm text-warm-gray mt-1">

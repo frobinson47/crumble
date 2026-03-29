@@ -3,11 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import RecipeForm from '../components/recipe/RecipeForm';
 import useRecipes from '../hooks/useRecipes';
 import Spinner from '../components/ui/Spinner';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function EditRecipePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { recipe, isLoading, error, fetchRecipe, updateRecipe } = useRecipes();
+
+  useDocumentTitle(recipe ? `Edit ${recipe.title}` : 'Edit Recipe');
 
   useEffect(() => {
     fetchRecipe(id);
@@ -60,7 +63,7 @@ export default function EditRecipePage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md p-6">
+      <div className="bg-surface rounded-2xl shadow-md p-6">
         <RecipeForm
           initialData={initialData}
           onSubmit={handleSubmit}

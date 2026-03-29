@@ -66,45 +66,42 @@ class RecipeScraper {
 
         $html = $fetchResult['html'];
 
-        // Try JSON-LD first
-        $jsonLd = $this->parseJsonLd($html);
-        if ($jsonLd) {
-            return array_merge($result, $jsonLd);
-        }
-
-        // Try microdata
-        $microdata = $this->parseMicrodata($html);
-        if ($microdata) {
-            return array_merge($result, $microdata);
-        }
-
-        // Try heuristic HTML parsing
-        $heuristic = $this->parseHeuristic($html);
-        if ($heuristic) {
-            return array_merge($result, $heuristic);
-        }
-
-        // Fallback to Open Graph (metadata only, no ingredients/instructions)
-        $og = $this->parseOpenGraph($html);
-        if ($og) {
-            return array_merge($result, $og);
-        }
+        // Try parsers in priority order
+        $parsed = $this->parseJsonLd($html)
+            ?? $this->parseMicrodata($html)
+            ?? $this->parseHeuristic($html)
+            ?? $this->parseOpenGraph($html);
 
         // Try cached/AMP version for JS-rendered pages
-        $cachedHtml = $this->fetchCachedVersion($url);
-        if ($cachedHtml !== null) {
-            $jsonLd = $this->parseJsonLd($cachedHtml);
-            if ($jsonLd) return array_merge($result, $jsonLd);
-
-            $microdata = $this->parseMicrodata($cachedHtml);
-            if ($microdata) return array_merge($result, $microdata);
-
-            $heuristic = $this->parseHeuristic($cachedHtml);
-            if ($heuristic) return array_merge($result, $heuristic);
+        if (!$parsed) {
+            $cachedHtml = $this->fetchCachedVersion($url);
+            if ($cachedHtml !== null) {
+                $parsed = $this->parseJsonLd($cachedHtml)
+                    ?? $this->parseMicrodata($cachedHtml)
+                    ?? $this->parseHeuristic($cachedHtml);
+            }
         }
 
-        $result['error_code'] = 'parse_failed';
-        $result['error'] = self::ERROR_MESSAGES['parse_failed'];
+        if (!$parsed) {
+            $result['error_code'] = 'parse_failed';
+            $result['error'] = self::ERROR_MESSAGES['parse_failed'];
+            return $result;
+        }
+
+        $result = array_merge($result, $parsed);
+
+        // Resolve relative image URLs
+        if (!empty($result['image_url']) && !preg_match('#^https?://#i', $result['image_url'])) {
+            $parsedUrl = parse_url($url);
+            $base = ($parsedUrl['scheme'] ?? 'https') . '://' . ($parsedUrl['host'] ?? '');
+            if (!empty($parsedUrl['port'])) {
+                $base .= ':' . $parsedUrl['port'];
+            }
+            $result['image_url'] = $result['image_url'][0] === '/'
+                ? $base . $result['image_url']
+                : $base . '/' . $result['image_url'];
+        }
+
         return $result;
     }
 
@@ -222,19 +219,15 @@ class RecipeScraper {
         $domain = $parsed['host'] ?? '';
         $path = $parsed['path'] ?? '/';
 
-        // Try Google AMP cache
+        // Try Google AMP cache (still works for some sites)
         $ampUrl = 'https://cdn.ampproject.org/c/s/' . $domain . $path;
         $ampResult = $this->fetchUrl($ampUrl);
         if ($ampResult['html'] !== null) {
             return $ampResult['html'];
         }
 
-        // Try Google Web Cache
-        $cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:' . urlencode($url);
-        $cacheResult = $this->fetchUrl($cacheUrl);
-        if ($cacheResult['html'] !== null) {
-            return $cacheResult['html'];
-        }
+        // Note: Google Web Cache was shut down in September 2024
+        // and webcache.googleusercontent.com no longer serves content.
 
         return null;
     }
@@ -305,6 +298,13 @@ class RecipeScraper {
         $result['description'] = $this->cleanText($data['description'] ?? '');
         $result['prep_time'] = $this->parseDuration($data['prepTime'] ?? null);
         $result['cook_time'] = $this->parseDuration($data['cookTime'] ?? null);
+        // Fall back to totalTime when both prep and cook are missing
+        if (!$result['prep_time'] && !$result['cook_time']) {
+            $total = $this->parseDuration($data['totalTime'] ?? null);
+            if ($total) {
+                $result['cook_time'] = $total;
+            }
+        }
         $result['servings'] = $this->parseServings($data['recipeYield'] ?? null);
 
         // Image
@@ -361,7 +361,13 @@ class RecipeScraper {
                                 $result['instructions'][] = $cleaned;
                             }
                         } elseif (isset($step['itemListElement']) && is_array($step['itemListElement'])) {
-                            // HowToSection with nested steps
+                            // HowToSection with nested steps — preserve section heading
+                            if (!empty($step['name'])) {
+                                $sectionName = $this->cleanText($step['name']);
+                                if ($sectionName !== '') {
+                                    $result['instructions'][] = '--- ' . $sectionName . ' ---';
+                                }
+                            }
                             foreach ($step['itemListElement'] as $subStep) {
                                 if (is_array($subStep) && isset($subStep['text'])) {
                                     $cleaned = $this->cleanText($subStep['text']);
@@ -376,7 +382,56 @@ class RecipeScraper {
             }
         }
 
+        // Nutrition from schema.org NutritionInformation
+        if (!empty($data['nutrition']) && is_array($data['nutrition'])) {
+            $n = $data['nutrition'];
+            $result['calories'] = $this->parseNutritionValue($n['calories'] ?? null);
+            $result['protein'] = $this->parseNutritionValue($n['proteinContent'] ?? null);
+            $result['fat'] = $this->parseNutritionValue($n['fatContent'] ?? null);
+            $result['carbs'] = $this->parseNutritionValue($n['carbohydrateContent'] ?? null);
+            $result['fiber'] = $this->parseNutritionValue($n['fiberContent'] ?? null);
+            $result['sugar'] = $this->parseNutritionValue($n['sugarContent'] ?? null);
+        }
+
+        // Tags from recipeCategory, recipeCuisine, and keywords
+        $tags = [];
+        foreach (['recipeCategory', 'recipeCuisine'] as $field) {
+            if (!empty($data[$field])) {
+                $value = $data[$field];
+                if (is_string($value)) {
+                    $tags = array_merge($tags, array_map('trim', explode(',', $value)));
+                } elseif (is_array($value)) {
+                    $tags = array_merge($tags, $value);
+                }
+            }
+        }
+        if (!empty($data['keywords'])) {
+            $kw = $data['keywords'];
+            if (is_string($kw)) {
+                $tags = array_merge($tags, array_map('trim', explode(',', $kw)));
+            } elseif (is_array($kw)) {
+                $tags = array_merge($tags, $kw);
+            }
+        }
+        // Deduplicate and filter empty
+        $tags = array_values(array_unique(array_filter(array_map('trim', $tags), fn($t) => $t !== '')));
+        if (!empty($tags)) {
+            $result['tags'] = $tags;
+        }
+
         return $result;
+    }
+
+    /**
+     * Extract a numeric value from a nutrition string like "250 calories" or "12 g".
+     */
+    private function parseNutritionValue($value): ?int {
+        if ($value === null) return null;
+        $value = (string) $value;
+        if (preg_match('/(\d+(?:\.\d+)?)/', $value, $m)) {
+            return (int) round((float) $m[1]);
+        }
+        return null;
     }
 
     /**
@@ -413,6 +468,12 @@ class RecipeScraper {
         $result['description'] = $this->cleanText($getProp('description'));
         $result['prep_time'] = $this->parseDuration($getProp('prepTime') ?: null);
         $result['cook_time'] = $this->parseDuration($getProp('cookTime') ?: null);
+        if (!$result['prep_time'] && !$result['cook_time']) {
+            $total = $this->parseDuration($getProp('totalTime') ?: null);
+            if ($total) {
+                $result['cook_time'] = $total;
+            }
+        }
         $result['servings'] = $this->parseServings($getProp('recipeYield') ?: null);
 
         // Image

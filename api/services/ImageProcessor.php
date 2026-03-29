@@ -61,16 +61,16 @@ class ImageProcessor {
         $origHeight = imagesy($source);
 
         // Generate full-size image (max 800px wide)
-        $this->resizeAndSave($source, $origWidth, $origHeight, IMAGE_MAX_WIDTH, IMAGE_QUALITY, $outputDir . DIRECTORY_SEPARATOR . 'full.jpg');
+        $this->resizeAndSave($source, $origWidth, $origHeight, IMAGE_MAX_WIDTH, IMAGE_QUALITY, $outputDir . DIRECTORY_SEPARATOR . 'full.webp');
 
         // Generate thumbnail (max 300px wide)
-        $this->resizeAndSave($source, $origWidth, $origHeight, THUMB_MAX_WIDTH, THUMB_QUALITY, $outputDir . DIRECTORY_SEPARATOR . 'thumb.jpg');
+        $this->resizeAndSave($source, $origWidth, $origHeight, THUMB_MAX_WIDTH, THUMB_QUALITY, $outputDir . DIRECTORY_SEPARATOR . 'thumb.webp');
 
         // Free memory
         imagedestroy($source);
 
         // Return relative path using forward slashes for URL consistency
-        return 'recipes/' . $recipeId . '/full.jpg';
+        return 'recipes/' . $recipeId . '/full.webp';
     }
 
     /**
@@ -87,7 +87,7 @@ class ImageProcessor {
     }
 
     /**
-     * Resize an image to a max width (maintaining aspect ratio) and save as JPEG.
+     * Resize an image to a max width (maintaining aspect ratio) and save as WebP.
      */
     private function resizeAndSave(\GdImage $source, int $origWidth, int $origHeight, int $maxWidth, int $quality, string $outputPath): void {
         if ($origWidth <= $maxWidth) {
@@ -100,13 +100,14 @@ class ImageProcessor {
 
         $resized = imagecreatetruecolor($newWidth, $newHeight);
 
-        // Preserve transparency for PNG/WebP (convert to white background for JPEG output)
-        $white = imagecolorallocate($resized, 255, 255, 255);
-        imagefill($resized, 0, 0, $white);
+        // Preserve alpha channel for WebP output
+        imagesavealpha($resized, true);
+        $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+        imagefill($resized, 0, 0, $transparent);
 
         imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
 
-        imagejpeg($resized, $outputPath, $quality);
+        imagewebp($resized, $outputPath, $quality);
         imagedestroy($resized);
     }
 
