@@ -57,13 +57,15 @@ else
     echo "Database already initialized."
 fi
 
-# Apply any pending migrations
+# Apply any pending migrations (strip user inserts so install wizard handles user creation)
 for migration in /var/www/html/database/migrations/*.sql; do
     [ -f "$migration" ] || continue
     php -r "
     \$pdo = new PDO('mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_NAME}', '${DB_USER}', '${DB_PASS}');
     \$sql = file_get_contents('$migration');
-    try { \$pdo->exec(\$sql); } catch (Exception \$e) {}
+    \$sql = preg_replace('/^INSERT INTO users.*?;\s*/ms', '', \$sql);
+    \$sql = trim(\$sql);
+    if (!empty(\$sql)) { try { \$pdo->exec(\$sql); } catch (Exception \$e) {} }
     " 2>/dev/null || true
 done
 
