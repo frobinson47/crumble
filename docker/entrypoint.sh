@@ -45,9 +45,11 @@ if [ "$table_exists" = "0" ]; then
     php -r "
     \$pdo = new PDO('mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_NAME}', '${DB_USER}', '${DB_PASS}');
     \$sql = file_get_contents('/var/www/html/database/schema.sql');
-    // Strip CREATE DATABASE block and USE line (Docker already created the DB)
+    // Strip CREATE DATABASE block, USE line, and seed users (install wizard handles user creation)
     \$sql = preg_replace('/CREATE DATABASE.*?;\s*/s', '', \$sql);
     \$sql = preg_replace('/^USE\s+\w+;\s*/m', '', \$sql);
+    \$sql = preg_replace('/^--.*seed.*$/mi', '', \$sql);
+    \$sql = preg_replace('/^INSERT INTO users.*?;\s*/ms', '', \$sql);
     \$pdo->exec(\$sql);
     echo 'Schema applied.';
     "
