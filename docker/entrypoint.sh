@@ -45,9 +45,9 @@ if [ "$table_exists" = "0" ]; then
     php -r "
     \$pdo = new PDO('mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_NAME}', '${DB_USER}', '${DB_PASS}');
     \$sql = file_get_contents('/var/www/html/database/schema.sql');
-    // Strip CREATE DATABASE and USE lines (Docker already created the DB)
-    \$sql = preg_replace('/^CREATE DATABASE.*$/m', '', \$sql);
-    \$sql = preg_replace('/^USE .*$/m', '', \$sql);
+    // Strip CREATE DATABASE block and USE line (Docker already created the DB)
+    \$sql = preg_replace('/CREATE DATABASE.*?;\s*/s', '', \$sql);
+    \$sql = preg_replace('/^USE\s+\w+;\s*/m', '', \$sql);
     \$pdo->exec(\$sql);
     echo 'Schema applied.';
     "
