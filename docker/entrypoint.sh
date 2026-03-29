@@ -65,6 +65,16 @@ for migration in /var/www/html/database/migrations/*.sql; do
     " 2>/dev/null || true
 done
 
+# Unblock install.php if no users exist yet (first-run)
+if [ "$table_exists" = "0" ] || [ "$(php -r "
+\$pdo = new PDO('mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_NAME}', '${DB_USER}', '${DB_PASS}');
+\$stmt = \$pdo->query('SELECT COUNT(*) FROM users');
+echo \$stmt->fetchColumn();
+" 2>/dev/null)" = "0" ]; then
+    echo "No users found - enabling install wizard..."
+    sed -i '/<FilesMatch "^install\\.php">/,/<\/FilesMatch>/d' /var/www/html/api/.htaccess
+fi
+
 # Fix permissions
 chown -R www-data:www-data /var/www/html/uploads
 
