@@ -23,7 +23,17 @@ A recipe manager that remembers how *you* cook — not just what you cook. Self-
 - Data export (JSON-LD, Cooklang)
 - PWA with offline support
 
-## Quick Start
+## Quick Start (Docker)
+
+```bash
+git clone https://github.com/frobinson47/cookslate.git
+cd cookslate
+docker compose up -d
+```
+
+Visit `http://localhost:8080` and run the install wizard to create your admin account. That's it.
+
+## Quick Start (Manual)
 
 1. Clone the repo to your web server's document root
 2. Copy `api/.env.example` to `api/.env` and configure database credentials
@@ -35,6 +45,9 @@ A recipe manager that remembers how *you* cook — not just what you cook. Self-
 
 ## Requirements
 
+**Docker:** Just Docker and Docker Compose.
+
+**Manual install:**
 - PHP 8.1+ with GD, PDO MySQL, OpenSSL extensions
 - MySQL 8.0+
 - Node.js 18+ (for building the frontend)

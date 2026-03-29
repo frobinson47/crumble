@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    container_name: cookslate-app
+    ports:
+      - "8080:80"
+    volumes:
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=cookslate_db
+      - DB_USER=cookslate
+      - DB_PASS=cookslate
+
+  db:
+    image: mysql:8
+    container_name: cookslate-db
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: cookslate_db
+      MYSQL_USER: cookslate
+      MYSQL_PASSWORD: cookslate
+      MYSQL_ROOT_PASSWORD: cookslate_root
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  uploads:
+  dbdata:

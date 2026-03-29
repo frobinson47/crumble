@@ -1,0 +1,17 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.git/
+.wrangler/
+api/.env
+api/config/license.key
+api/config/license.private.pem
+api/vendor/
+api/.phpunit.result.cache
+docs/
+aar/
+.claude/
+*.md
+!README.md
+outpost.PNG
+crumble_db_backup.sql
