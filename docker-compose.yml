@@ -20,7 +20,7 @@ services:
     image: mysql:8
     container_name: cookslate-db
     ports:
-      - "3307:3306"
+      - "3309:3306"
     volumes:
       - dbdata:/var/lib/mysql
     environment:
