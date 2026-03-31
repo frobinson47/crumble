@@ -18,7 +18,7 @@ export default function BottomNav() {
   const { active: proActive } = useLicense();
   const navItems = proActive ? [...baseNavItems.slice(0, 3), ...proNavItems, baseNavItems[3]] : baseNavItems;
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm border-t border-cream-dark shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-cream-dark shadow-lg">
       <div className="flex items-center justify-around h-16">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
