@@ -31,7 +31,7 @@ export default function Layout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-cream flex">
+    <div className="min-h-screen bg-cream flex max-w-[100vw] overflow-x-clip">
       {/* Skip to content link for keyboard/screen reader users */}
       <a
         href="#main-content"

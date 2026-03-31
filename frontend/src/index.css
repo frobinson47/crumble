@@ -19,10 +19,7 @@
   --font-family-serif: 'Playfair Display', Georgia, serif;
 }
 
-/* Base styles — overflow-x only on html to prevent horizontal scroll without breaking sticky */
-html {
-  overflow-x: clip;
-}
+/* Base styles */
 
 body {
   font-family: 'Nunito', sans-serif;
