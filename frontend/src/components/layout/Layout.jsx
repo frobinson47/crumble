@@ -31,7 +31,7 @@ export default function Layout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-cream flex max-w-[100vw] overflow-x-clip">
+    <div className="min-h-screen bg-cream flex w-full">
       {/* Skip to content link for keyboard/screen reader users */}
       <a
         href="#main-content"
@@ -44,7 +44,7 @@ export default function Layout({ children }) {
       <Sidebar />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Demo Banner */}
         {isDemo && (
           <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm text-amber-800">

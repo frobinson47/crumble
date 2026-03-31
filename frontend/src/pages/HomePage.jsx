@@ -152,9 +152,9 @@ export default function HomePage({ searchQuery = '' }) {
           to={`/recipe/${featured.id}`}
           className="group block relative rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
         >
-          <div className="aspect-[21/9] md:aspect-[3/1]">
+          <div className="aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1]">
             <img
-              src={fullImageUrl(featured.image_path)}
+              src={thumbImageUrl(featured.image_path)}
               alt={featured.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
