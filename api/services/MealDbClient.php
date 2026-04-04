@@ -90,6 +90,7 @@ class MealDbClient
             'description' => $meal['area'] ? "A {$meal['area']} dish" : '',
             'source_url' => $meal['source'] ?? '',
             'source_image_url' => $meal['image'] ?? '',
+            'servings' => 4,
             'instructions' => $meal['instructions'] ?? [],
             'ingredients' => $meal['ingredients'] ?? [],
             'tags' => array_filter(array_merge(
