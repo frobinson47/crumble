@@ -771,9 +771,13 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
               onClick={async () => {
                 setAutoNutritionLoading(true);
                 try {
-                  const names = ingredients.filter(i => i.name?.trim()).map(i => i.name.trim());
+                  const ings = ingredients.filter(i => i.name?.trim()).map(i => ({
+                    name: i.name.trim(),
+                    amount: i.amount || '',
+                    unit: i.unit || '',
+                  }));
                   const srv = servings ? parseInt(servings) : null;
-                  const result = await api.autoNutrition(names, srv);
+                  const result = await api.autoNutrition(ings, srv);
                   const data = result.per_serving || result.total;
                   if (data) {
                     setCalories(String(data.calories || ''));

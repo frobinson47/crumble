@@ -608,103 +608,61 @@ try {
                 $response = ['ingredients' => $stmt->fetchAll(\PDO::FETCH_ASSOC)];
             } elseif ($id === 'auto-nutrition' && $method === 'POST') {
                 // POST /ingredient-data/auto-nutrition
-                // Takes ingredient names, matches locally + USDA fallback, returns totals
+                // Takes full ingredients (name, amount, unit) for accurate gram-based calculation
                 Auth::requireAuth();
                 $data = json_decode(file_get_contents('php://input'), true);
-                $ingredientNames = $data['ingredients'] ?? [];
+                $ingredientList = $data['ingredients'] ?? [];
                 $servings = $data['servings'] ?? null;
 
-                if (empty($ingredientNames)) {
+                if (empty($ingredientList)) {
                     http_response_code(400);
                     $response = ['error' => 'ingredients array required'];
                 } else {
-                    $db = Database::getInstance();
-                    $totals = ['calories' => 0, 'protein' => 0, 'carbs' => 0, 'fat' => 0, 'fiber' => 0, 'sugar' => 0];
-                    $matched = 0;
-                    $unmatched = [];
-
-                    foreach ($ingredientNames as $name) {
-                        $name = strtolower(trim($name));
-                        if (empty($name)) continue;
-
-                        // Try local DB first
-                        $stmt = $db->prepare('SELECT * FROM ingredient_data WHERE LOWER(name) = ?');
-                        $stmt->execute([$name]);
-                        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-                        if (!$row) {
-                            // Substring match
-                            $stmt = $db->prepare('SELECT * FROM ingredient_data WHERE ? LIKE CONCAT(\'%\', LOWER(name), \'%\') ORDER BY LENGTH(name) DESC LIMIT 1');
-                            $stmt->execute([$name]);
-                            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    // Normalize: accept both [{name,amount,unit}] and ["name1","name2"] formats
+                    $normalized = [];
+                    foreach ($ingredientList as $ing) {
+                        if (is_string($ing)) {
+                            $normalized[] = ['name' => $ing, 'amount' => '', 'unit' => ''];
+                        } else {
+                            $normalized[] = $ing;
                         }
+                    }
 
-                        if (!$row) {
-                            // Reverse match
-                            $stmt = $db->prepare('SELECT * FROM ingredient_data WHERE LOWER(name) LIKE CONCAT(\'%\', ?, \'%\') ORDER BY LENGTH(name) ASC LIMIT 1');
-                            $stmt->execute([$name]);
-                            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-                        }
-
-                        if (!$row) {
-                            // Try USDA API as fallback
-                            $apiKey = env('USDA_API_KEY', '');
-                            if (!empty($apiKey)) {
-                                require_once __DIR__ . '/services/UsdaLookup.php';
-                                $usda = new UsdaLookup($apiKey);
+                    // USDA fallback for unmatched ingredients
+                    $apiKey = env('USDA_API_KEY', '');
+                    if (!empty($apiKey)) {
+                        require_once __DIR__ . '/services/UsdaLookup.php';
+                        $usda = new UsdaLookup($apiKey);
+                        $db = Database::getInstance();
+                        foreach ($normalized as $ing) {
+                            $name = strtolower(trim($ing['name'] ?? ''));
+                            if (empty($name)) continue;
+                            // Check if it exists locally
+                            $stmt = $db->prepare('SELECT id FROM ingredient_data WHERE LOWER(name) = ? OR ? LIKE CONCAT(\'%\', LOWER(name), \'%\') OR LOWER(name) LIKE CONCAT(\'%\', ?, \'%\') LIMIT 1');
+                            $stmt->execute([$name, $name, $name]);
+                            if (!$stmt->fetch()) {
+                                // Not found — try USDA
                                 $results = $usda->search($name, 1);
                                 if (!empty($results)) {
-                                    $usdaItem = $results[0];
-                                    // Save to local DB for future lookups
+                                    $u = $results[0];
                                     $db->prepare('INSERT IGNORE INTO ingredient_data (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g) VALUES (?, ?, ?, ?, ?, ?)')
-                                        ->execute([$name, $usdaItem['calories_per_100g'], $usdaItem['protein_per_100g'], $usdaItem['carbs_per_100g'], $usdaItem['fat_per_100g'], $usdaItem['fiber_per_100g']]);
-                                    $row = [
-                                        'calories_per_100g' => $usdaItem['calories_per_100g'],
-                                        'protein_per_100g' => $usdaItem['protein_per_100g'],
-                                        'carbs_per_100g' => $usdaItem['carbs_per_100g'],
-                                        'fat_per_100g' => $usdaItem['fat_per_100g'],
-                                        'fiber_per_100g' => $usdaItem['fiber_per_100g'],
-                                    ];
+                                        ->execute([$name, $u['calories_per_100g'], $u['protein_per_100g'], $u['carbs_per_100g'], $u['fat_per_100g'], $u['fiber_per_100g']]);
                                 }
                             }
                         }
-
-                        if ($row) {
-                            $matched++;
-                            $totals['calories'] += (float) ($row['calories_per_100g'] ?? 0);
-                            $totals['protein'] += (float) ($row['protein_per_100g'] ?? 0);
-                            $totals['carbs'] += (float) ($row['carbs_per_100g'] ?? 0);
-                            $totals['fat'] += (float) ($row['fat_per_100g'] ?? 0);
-                            $totals['fiber'] += (float) ($row['fiber_per_100g'] ?? 0);
-                        } else {
-                            $unmatched[] = $name;
-                        }
                     }
 
-                    // Calculate per-serving
-                    $perServing = null;
-                    if ($servings && $servings > 0) {
-                        $perServing = [
-                            'calories' => round($totals['calories'] / $servings),
-                            'protein' => round($totals['protein'] / $servings, 1),
-                            'carbs' => round($totals['carbs'] / $servings, 1),
-                            'fat' => round($totals['fat'] / $servings, 1),
-                            'fiber' => round($totals['fiber'] / $servings, 1),
-                        ];
-                    }
+                    require_once __DIR__ . '/services/RecipeAnalyzer.php';
+                    $analyzer = new RecipeAnalyzer();
+                    $analysis = $analyzer->analyze($normalized, $servings ? (int) $servings : null);
 
                     $response = [
-                        'total' => [
-                            'calories' => round($totals['calories']),
-                            'protein' => round($totals['protein'], 1),
-                            'carbs' => round($totals['carbs'], 1),
-                            'fat' => round($totals['fat'], 1),
-                            'fiber' => round($totals['fiber'], 1),
-                        ],
-                        'per_serving' => $perServing,
-                        'matched' => $matched,
-                        'total_ingredients' => count($ingredientNames),
-                        'unmatched' => $unmatched,
+                        'total' => $analysis['nutrition'],
+                        'per_serving' => $analysis['nutrition']['per_serving'],
+                        'matched' => $analysis['coverage']['matched'],
+                        'total_ingredients' => $analysis['coverage']['total'],
+                        'unmatched' => $analysis['coverage']['unmatched'],
+                        'breakdown' => $analysis['breakdown'],
                     ];
                 }
             } elseif ($id === 'usda-search' && $method === 'GET') {
