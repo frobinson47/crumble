@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Trash2, Database, Loader2, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, Trash2, Database, Loader2, Pencil } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
@@ -166,13 +166,18 @@ export default function IngredientDatabasePage() {
                 <tr key={ing.id} className="hover:bg-cream/50 transition-colors">
                   {editingId === ing.id ? (
                     <>
-                      <td className="px-4 py-2"><Input value={editValues.name || ''} onChange={e => setEditValues({...editValues, name: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input value={editValues.category || ''} onChange={e => setEditValues({...editValues, category: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input type="number" step="0.01" value={editValues.avg_price || ''} onChange={e => setEditValues({...editValues, avg_price: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input type="number" value={editValues.calories_per_100g || ''} onChange={e => setEditValues({...editValues, calories_per_100g: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.protein_per_100g || ''} onChange={e => setEditValues({...editValues, protein_per_100g: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.carbs_per_100g || ''} onChange={e => setEditValues({...editValues, carbs_per_100g: e.target.value})} /></td>
-                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.fat_per_100g || ''} onChange={e => setEditValues({...editValues, fat_per_100g: e.target.value})} /></td>
+                      <td className="px-4 py-2"><Input value={editValues.name ?? ''} onChange={e => setEditValues({...editValues, name: e.target.value})} /></td>
+                      <td className="px-3 py-2"><Input value={editValues.category ?? ''} onChange={e => setEditValues({...editValues, category: e.target.value})} /></td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-1">
+                          <Input type="number" step="0.01" value={editValues.avg_price ?? ''} onChange={e => setEditValues({...editValues, avg_price: e.target.value})} placeholder="$" />
+                          <Input value={editValues.price_unit ?? ''} onChange={e => setEditValues({...editValues, price_unit: e.target.value})} placeholder="unit" className="w-16" />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2"><Input type="number" value={editValues.calories_per_100g ?? ''} onChange={e => setEditValues({...editValues, calories_per_100g: e.target.value})} /></td>
+                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.protein_per_100g ?? ''} onChange={e => setEditValues({...editValues, protein_per_100g: e.target.value})} /></td>
+                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.carbs_per_100g ?? ''} onChange={e => setEditValues({...editValues, carbs_per_100g: e.target.value})} /></td>
+                      <td className="px-3 py-2"><Input type="number" step="0.1" value={editValues.fat_per_100g ?? ''} onChange={e => setEditValues({...editValues, fat_per_100g: e.target.value})} /></td>
                       <td className="px-3 py-2 text-center">
                         <div className="flex gap-1 justify-center">
                           <Button size="sm" onClick={handleSave}>Save</Button>
@@ -192,7 +197,7 @@ export default function IngredientDatabasePage() {
                       <td className="px-3 py-2.5 text-center">
                         <div className="flex gap-1 justify-center">
                           <button onClick={() => handleEdit(ing)} className="p-1.5 rounded-lg text-warm-gray hover:text-terracotta hover:bg-terracotta/10 transition-colors" title="Edit">
-                            <ArrowUpDown size={14} />
+                            <Pencil size={14} />
                           </button>
                           <button onClick={() => { setShowUsda(true); setUsdaTarget(ing.id); setUsdaQuery(ing.name); setUsdaResults([]); }} className="p-1.5 rounded-lg text-warm-gray hover:text-sage hover:bg-sage/10 transition-colors" title="USDA Lookup">
                             <Search size={14} />
