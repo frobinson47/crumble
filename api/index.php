@@ -278,7 +278,7 @@ try {
                     Auth::requireAuth();
                     require_once __DIR__ . '/services/RecipeAnalyzer.php';
                     $recipeModel = new Recipe();
-                    $full = $recipeModel->getById($recipeId);
+                    $full = $recipeModel->findById($recipeId);
                     if (!$full) {
                         http_response_code(404);
                         $response = ['error' => 'Recipe not found'];
