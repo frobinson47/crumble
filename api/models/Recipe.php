@@ -67,7 +67,7 @@ class Recipe {
 
         $sql = "
             SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
-                   r.image_path, r.created_at, r.updated_at, r.created_by,
+                   r.image_path, r.calories, r.created_at, r.updated_at, r.created_by,
                    u.username AS author,
                    (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id = r.id) AS ingredient_count,
                    (SELECT ROUND(AVG(rt.score), 1) FROM ratings rt WHERE rt.recipe_id = r.id) AS avg_rating,
