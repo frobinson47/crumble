@@ -15,6 +15,7 @@ services:
       - DB_NAME=cookslate_db
       - DB_USER=cookslate
       - DB_PASS=cookslate
+      - USDA_API_KEY=${USDA_API_KEY:-}
 
   db:
     image: mysql:8

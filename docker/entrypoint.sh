@@ -30,6 +30,7 @@ DB_PASS=${DB_PASS:-cookslate}
 CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080}
 APP_ENV=${APP_ENV:-development}
 APP_URL=${APP_URL:-http://localhost:8080}
+USDA_API_KEY=${USDA_API_KEY:-}
 ENVEOF
 fi
 
