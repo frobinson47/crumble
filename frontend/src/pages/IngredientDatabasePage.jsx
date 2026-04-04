@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Trash2, Database, Loader2, Pencil } from 'lucide-react';
+import { Search, Plus, Trash2, Database, Loader2, Pencil, ScanBarcode } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
@@ -20,7 +20,12 @@ export default function IngredientDatabasePage() {
   const [usdaResults, setUsdaResults] = useState([]);
   const [usdaLoading, setUsdaLoading] = useState(false);
   const [showUsda, setShowUsda] = useState(false);
-  const [usdaTarget, setUsdaTarget] = useState(null); // ingredient ID to apply USDA data to
+  const [usdaTarget, setUsdaTarget] = useState(null);
+  const [showBarcode, setShowBarcode] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [barcodeResult, setBarcodeResult] = useState(null);
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [barcodeError, setBarcodeError] = useState('');
 
   const fetchIngredients = useCallback(async () => {
     try {
@@ -80,6 +85,42 @@ export default function IngredientDatabasePage() {
     }
   };
 
+  const handleBarcodeLookup = async () => {
+    if (!barcodeInput.trim()) return;
+    setBarcodeLoading(true);
+    setBarcodeError('');
+    setBarcodeResult(null);
+    try {
+      const product = await api.lookupBarcode(barcodeInput.trim());
+      if (product.error) {
+        setBarcodeError(product.error);
+      } else {
+        setBarcodeResult(product);
+      }
+    } catch (err) {
+      setBarcodeError(err.message || 'Product not found');
+    }
+    setBarcodeLoading(false);
+  };
+
+  const handleImportBarcode = async () => {
+    if (!barcodeResult) return;
+    const n = barcodeResult.nutrition;
+    await api.createIngredientData({
+      name: (barcodeResult.name || barcodeResult.brand || barcodeInput).toLowerCase(),
+      category: barcodeResult.categories?.split(',')[0]?.trim() || '',
+      calories_per_100g: n.calories_per_100g,
+      protein_per_100g: n.protein_per_100g,
+      carbs_per_100g: n.carbs_per_100g,
+      fat_per_100g: n.fat_per_100g,
+      fiber_per_100g: n.fiber_per_100g,
+    });
+    setShowBarcode(false);
+    setBarcodeResult(null);
+    setBarcodeInput('');
+    fetchIngredients();
+  };
+
   const handleApplyUsda = async (usdaItem) => {
     if (usdaTarget) {
       // Update existing ingredient
@@ -116,9 +157,13 @@ export default function IngredientDatabasePage() {
           <h1 className="text-2xl font-bold text-brown font-display">Ingredient Database</h1>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setShowBarcode(true); setBarcodeInput(''); setBarcodeResult(null); setBarcodeError(''); }}>
+            <ScanBarcode size={16} />
+            Barcode
+          </Button>
           <Button variant="outline" onClick={() => { setShowUsda(true); setUsdaTarget(null); setUsdaQuery(''); setUsdaResults([]); }}>
             <Search size={16} />
-            USDA Lookup
+            USDA
           </Button>
           <Button onClick={() => setShowAdd(true)}>
             <Plus size={16} />
@@ -244,6 +289,72 @@ export default function IngredientDatabasePage() {
             <Button variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={!newIngredient.name.trim()}>Add Ingredient</Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Barcode Lookup Modal */}
+      <Modal isOpen={showBarcode} onClose={() => setShowBarcode(false)} title="Barcode / UPC Lookup" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-warm-gray">Enter a product barcode to look up nutrition data from Open Food Facts.</p>
+          <form onSubmit={e => { e.preventDefault(); handleBarcodeLookup(); }} className="flex gap-2">
+            <Input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} placeholder="e.g. 3017620422003" autoFocus />
+            <Button type="submit" disabled={barcodeLoading}>
+              {barcodeLoading ? <Loader2 size={16} className="animate-spin" /> : <ScanBarcode size={16} />}
+            </Button>
+          </form>
+
+          {barcodeError && <p className="text-sm text-red-500">{barcodeError}</p>}
+
+          {barcodeResult && (
+            <div className="p-4 rounded-xl border border-cream-dark bg-cream/50">
+              <div className="flex gap-3">
+                {barcodeResult.image_url && (
+                  <img src={barcodeResult.image_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-brown text-sm">{barcodeResult.name || 'Unknown product'}</p>
+                  {barcodeResult.brand && <p className="text-xs text-warm-gray">{barcodeResult.brand}</p>}
+                  {barcodeResult.quantity && <p className="text-xs text-warm-gray">{barcodeResult.quantity}</p>}
+                  {barcodeResult.nutriscore && (
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                      barcodeResult.nutriscore === 'a' ? 'bg-green-100 text-green-700' :
+                      barcodeResult.nutriscore === 'b' ? 'bg-lime-100 text-lime-700' :
+                      barcodeResult.nutriscore === 'c' ? 'bg-yellow-100 text-yellow-700' :
+                      barcodeResult.nutriscore === 'd' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>Nutri-Score {barcodeResult.nutriscore}</span>
+                  )}
+                </div>
+              </div>
+              {barcodeResult.nutrition && (
+                <div className="grid grid-cols-4 gap-2 mt-3 text-center">
+                  <div>
+                    <p className="text-sm font-bold text-brown">{barcodeResult.nutrition.calories_per_100g ?? '—'}</p>
+                    <p className="text-[10px] text-warm-gray">kcal</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-brown">{barcodeResult.nutrition.protein_per_100g ?? '—'}g</p>
+                    <p className="text-[10px] text-warm-gray">Protein</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-brown">{barcodeResult.nutrition.carbs_per_100g ?? '—'}g</p>
+                    <p className="text-[10px] text-warm-gray">Carbs</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-brown">{barcodeResult.nutrition.fat_per_100g ?? '—'}g</p>
+                    <p className="text-[10px] text-warm-gray">Fat</p>
+                  </div>
+                </div>
+              )}
+              {barcodeResult.allergens && (
+                <p className="text-xs text-warm-gray mt-2">Allergens: {barcodeResult.allergens}</p>
+              )}
+              <Button onClick={handleImportBarcode} className="w-full mt-3">
+                <Plus size={16} />
+                Add to Ingredient Database
+              </Button>
+            </div>
+          )}
         </div>
       </Modal>
 

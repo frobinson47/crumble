@@ -656,6 +656,38 @@ try {
             }
             break;
 
+        // ── Food Lookup Routes (Open Food Facts) ────────────────────────
+        case 'food-lookup':
+            require_once __DIR__ . '/services/OpenFoodFactsClient.php';
+            $off = new OpenFoodFactsClient();
+
+            if ($id === 'barcode' && $method === 'GET') {
+                // GET /food-lookup/barcode?code=3017620422003
+                $code = $_GET['code'] ?? '';
+                if (empty($code)) {
+                    http_response_code(400);
+                    $response = ['error' => 'Barcode required'];
+                } else {
+                    $product = $off->getByBarcode($code);
+                    if ($product) {
+                        $response = $product;
+                    } else {
+                        http_response_code(404);
+                        $response = ['error' => 'Product not found'];
+                    }
+                }
+            } elseif ($id === 'search' && $method === 'GET') {
+                // GET /food-lookup/search?q=nutella
+                $q = $_GET['q'] ?? '';
+                if (empty($q)) {
+                    http_response_code(400);
+                    $response = ['error' => 'Search query required'];
+                } else {
+                    $response = ['products' => $off->search($q)];
+                }
+            }
+            break;
+
         // ── Ingredient Data Routes (admin) ──────────────────────────────
         case 'ingredient-data':
             require_once __DIR__ . '/middleware/Auth.php';
