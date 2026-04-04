@@ -656,6 +656,38 @@ try {
             }
             break;
 
+        // ── Substitutions Routes ────────────────────────────────────────
+        case 'substitutions':
+            require_once __DIR__ . '/models/Database.php';
+            $db = Database::getInstance();
+
+            if ($id === null && $method === 'GET') {
+                // GET /substitutions?ingredient=butter
+                $ingredient = strtolower(trim($_GET['ingredient'] ?? ''));
+                if (empty($ingredient)) {
+                    $response = ['substitutions' => []];
+                } else {
+                    $stmt = $db->prepare('SELECT substitute, ratio, notes FROM ingredient_substitutions WHERE LOWER(ingredient) = ? OR LOWER(ingredient) LIKE ?');
+                    $stmt->execute([$ingredient, "%$ingredient%"]);
+                    $response = ['substitutions' => $stmt->fetchAll(\PDO::FETCH_ASSOC)];
+                }
+            } elseif ($id === 'for-recipe' && $method === 'GET') {
+                // GET /substitutions/for-recipe?ingredients=butter,egg,milk
+                $names = array_filter(array_map('trim', explode(',', $_GET['ingredients'] ?? '')));
+                $result = [];
+                foreach ($names as $name) {
+                    $name = strtolower($name);
+                    $stmt = $db->prepare('SELECT substitute, ratio, notes FROM ingredient_substitutions WHERE LOWER(ingredient) = ? OR ? LIKE CONCAT(\'%\', LOWER(ingredient), \'%\') LIMIT 3');
+                    $stmt->execute([$name, $name]);
+                    $subs = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                    if (!empty($subs)) {
+                        $result[$name] = $subs;
+                    }
+                }
+                $response = ['substitutions' => $result];
+            }
+            break;
+
         // ── Food Lookup Routes (Open Food Facts) ────────────────────────
         case 'food-lookup':
             require_once __DIR__ . '/services/OpenFoodFactsClient.php';

@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import SubstitutionTip from './SubstitutionTip';
 const AnnotationNote = lazy(() => import('../../pro/ProAnnotations'));
 
 export default function IngredientList({ ingredients, checkable = false, checkedItems = {}, onToggle, annotations = {}, onAnnotationSave, onAnnotationDelete }) {
@@ -49,6 +50,7 @@ export default function IngredientList({ ingredients, checkable = false, checked
                 {ingredient.unit === 'to taste' && (
                   <span className="text-warm-gray italic"> (to taste)</span>
                 )}
+                {!checkable && ingredient.name && <SubstitutionTip ingredientName={ingredient.name} />}
               </span>
             </div>
             {hasAnnotations && (

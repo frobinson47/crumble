@@ -371,6 +371,15 @@ export function importDiscoverMeal(mealdbId) {
   return request('/discover/import', { method: 'POST', body: { mealdb_id: mealdbId } });
 }
 
+// Substitutions
+export function getSubstitutions(ingredient) {
+  return request(`/substitutions?ingredient=${encodeURIComponent(ingredient)}`);
+}
+
+export function getSubstitutionsForRecipe(ingredientNames) {
+  return request(`/substitutions/for-recipe?ingredients=${encodeURIComponent(ingredientNames.join(','))}`);
+}
+
 // Food Lookup (Open Food Facts)
 export function lookupBarcode(code) {
   return request(`/food-lookup/barcode?code=${encodeURIComponent(code)}`);
