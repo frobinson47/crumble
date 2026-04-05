@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Search, X, CookingPot, Sun, Moon, Monitor, Menu, BookOpen, TrendingUp, Upload, Shield, LogOut, User, Download } from 'lucide-react';
+import { Search, X, CookingPot, Sun, Moon, Monitor, Menu, BookOpen, TrendingUp, Upload, Shield, LogOut, User, Download, Compass, Database } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 
@@ -178,6 +178,8 @@ export default function Header({ onSearch }) {
           {/* Drawer navigation */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {[
+              { to: '/discover', icon: Compass, label: 'Discover' },
+              { to: '/ingredient-database', icon: Database, label: 'Ingredients' },
               { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
               { to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' },
               { to: '/bulk-import', icon: Upload, label: 'Bulk Import' },
