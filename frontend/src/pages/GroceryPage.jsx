@@ -11,6 +11,7 @@ import { Skeleton, GroceryListSkeleton } from '../components/ui/Skeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { groupByCategory } from '../utils/ingredientCategories';
 import PantrySection from '../components/grocery/PantrySection';
+import usePantry from '../hooks/usePantry';
 
 export default function GroceryPage() {
   const {
@@ -18,6 +19,8 @@ export default function GroceryPage() {
     fetchLists, fetchList, createList, deleteList,
     addItem, updateItem, removeItem, clearChecked,
   } = useGrocery();
+
+  const { addItem: addPantryItem, removeItem: removePantryItem, fetchPantry } = usePantry();
 
   useDocumentTitle(currentList ? currentList.name : 'Grocery Lists');
 
@@ -70,6 +73,14 @@ export default function GroceryPage() {
     if (!newItemName.trim() || !currentList) return;
     await addItem(currentList.id, { name: newItemName.trim() });
     setNewItemName('');
+  };
+
+  const handlePantryToggle = async (itemId, ingredientName, markAsPantry) => {
+    if (!currentList) return;
+    if (markAsPantry) {
+      await addPantryItem(ingredientName);
+    }
+    await updateItem(currentList.id, itemId, { in_pantry: markAsPantry });
   };
 
   const checkedCount = currentList?.items?.filter(i => i.checked).length || 0;
@@ -214,6 +225,7 @@ export default function GroceryPage() {
                         item={item}
                         onToggle={handleToggleItem}
                         onDelete={handleDeleteItem}
+                        onPantryToggle={handlePantryToggle}
                       />
                     ))}
                   </div>
@@ -228,6 +240,7 @@ export default function GroceryPage() {
                   item={item}
                   onToggle={handleToggleItem}
                   onDelete={handleDeleteItem}
+                  onPantryToggle={handlePantryToggle}
                 />
               ))}
             </div>

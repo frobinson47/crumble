@@ -205,6 +205,15 @@ export function groupByCategory(items) {
     groups[category].push(item);
   }
 
+  // Sort pantry items to bottom within each group
+  Object.values(groups).forEach(groupItems => {
+    groupItems.sort((a, b) => {
+      const aPantry = a.in_pantry ? 1 : 0;
+      const bPantry = b.in_pantry ? 1 : 0;
+      return aPantry - bPantry;
+    });
+  });
+
   return CATEGORY_ORDER
     .filter(cat => groups[cat])
     .map(cat => ({ category: cat, items: groups[cat] }));

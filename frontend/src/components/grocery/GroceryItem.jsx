@@ -1,16 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Warehouse } from 'lucide-react';
 
-export default function GroceryItem({ item, onToggle, onDelete }) {
+export default function GroceryItem({ item, onToggle, onDelete, onPantryToggle }) {
   const isChecked = item.checked === true || item.checked === 1;
+  const inPantry = item.in_pantry === true || item.in_pantry === 1;
 
   return (
     <div
       className={`
         flex items-center gap-3 py-3 px-4 rounded-xl
         group transition-all duration-200
-        ${isChecked ? 'bg-cream-dark/50' : 'hover:bg-cream-dark/30'}
+        ${inPantry ? 'bg-green-50/50 opacity-60' : isChecked ? 'bg-cream-dark/50' : 'hover:bg-cream-dark/30'}
       `}
     >
       <input
@@ -21,11 +22,14 @@ export default function GroceryItem({ item, onToggle, onDelete }) {
       />
 
       <div className={`flex-1 min-w-0 transition-all duration-200 ${isChecked ? 'opacity-50' : ''}`}>
-        <span className={`text-brown-light ${isChecked ? 'line-through' : ''}`}>
+        <span className={`text-brown-light ${isChecked || inPantry ? 'line-through' : ''}`}>
           {item.amount && <span className="font-semibold">{item.amount} </span>}
           {item.unit && <span>{item.unit} </span>}
           {item.name}
         </span>
+        {inPantry && (
+          <span className="text-xs text-green-600 ml-2">in pantry</span>
+        )}
         {item.recipe_title && item.recipe_id && (
           <Link
             to={`/recipe/${item.recipe_id}`}
@@ -41,6 +45,21 @@ export default function GroceryItem({ item, onToggle, onDelete }) {
           </span>
         )}
       </div>
+
+      {onPantryToggle && (
+        <button
+          onClick={() => onPantryToggle(item.id, item.name, !inPantry)}
+          className={`p-2 transition-all duration-200 min-w-[36px] min-h-[36px] flex items-center justify-center ${
+            inPantry
+              ? 'text-green-600 opacity-100'
+              : 'text-warm-gray opacity-60 hover:text-green-600 md:opacity-0 md:group-hover:opacity-100'
+          }`}
+          aria-label={inPantry ? 'Remove from pantry' : 'Mark as pantry item'}
+          title={inPantry ? 'In pantry' : 'Mark as pantry item'}
+        >
+          <Warehouse size={16} />
+        </button>
+      )}
 
       <button
         onClick={() => onDelete(item.id)}
