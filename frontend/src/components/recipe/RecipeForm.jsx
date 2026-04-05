@@ -113,9 +113,9 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
     if (initialData) {
       setTitle(initialData.title || '');
       setDescription(initialData.description || '');
-      setPrepTime(initialData.prep_time || initialData.prepTime || '');
-      setCookTime(initialData.cook_time || initialData.cookTime || '');
-      setServings(initialData.servings || '');
+      setPrepTime(String(initialData.prep_time || initialData.prepTime || ''));
+      setCookTime(String(initialData.cook_time || initialData.cookTime || ''));
+      setServings(String(initialData.servings || ''));
       setSourceUrl(initialData.source_url || initialData.sourceUrl || '');
 
       if (initialData.ingredients && initialData.ingredients.length > 0) {
@@ -153,12 +153,12 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       // Nutrition
       if (initialData.calories || initialData.protein || initialData.carbs || initialData.fat || initialData.fiber || initialData.sugar) {
         setShowNutrition(true);
-        setCalories(initialData.calories || '');
-        setProtein(initialData.protein || '');
-        setCarbs(initialData.carbs || '');
-        setFat(initialData.fat || '');
-        setFiber(initialData.fiber || '');
-        setSugar(initialData.sugar || '');
+        setCalories(String(initialData.calories || ''));
+        setProtein(String(initialData.protein || ''));
+        setCarbs(String(initialData.carbs || ''));
+        setFat(String(initialData.fat || ''));
+        setFiber(String(initialData.fiber || ''));
+        setSugar(String(initialData.sugar || ''));
       }
     }
   }, [initialData]);
