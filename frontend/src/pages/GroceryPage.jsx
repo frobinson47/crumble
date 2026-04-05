@@ -10,6 +10,7 @@ import Spinner from '../components/ui/Spinner';
 import { Skeleton, GroceryListSkeleton } from '../components/ui/Skeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { groupByCategory } from '../utils/ingredientCategories';
+import PantrySection from '../components/grocery/PantrySection';
 
 export default function GroceryPage() {
   const {
@@ -286,6 +287,9 @@ export default function GroceryPage() {
           ))}
         </div>
       )}
+
+      {/* Pantry section */}
+      <PantrySection />
 
       {/* Delete list confirmation modal */}
       <Modal
