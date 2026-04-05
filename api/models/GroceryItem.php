@@ -175,13 +175,20 @@ class GroceryItem {
         return array_map(function ($item) use ($service) {
             $result = $service->convert($item['amount'], $item['unit'], $item['name']);
             if ($result) {
-                $item['package_display'] = $result['packages_needed'] . ' ' .
-                    $result['package_description'] .
-                    ' (' . $result['package_label'] . ')';
                 $item['package_info'] = $result;
+                if ($result['fraction_of_package'] < 0.25) {
+                    $item['package_display'] = 'You probably have this';
+                    $item['package_suggestion'] = 'pantry';
+                } else {
+                    $item['package_display'] = $result['packages_needed'] . ' ' .
+                        $result['package_description'] .
+                        ' (' . $result['package_label'] . ')';
+                    $item['package_suggestion'] = null;
+                }
             } else {
                 $item['package_display'] = null;
                 $item['package_info'] = null;
+                $item['package_suggestion'] = null;
             }
             return $item;
         }, $items);

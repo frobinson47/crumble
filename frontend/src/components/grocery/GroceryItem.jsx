@@ -31,8 +31,8 @@ export default function GroceryItem({ item, onToggle, onDelete, onPantryToggle }
           <span className="text-xs text-green-600 ml-2">in pantry</span>
         )}
         {!inPantry && item.package_display && (
-          <div className="text-xs text-warm-gray mt-0.5">
-            Buy: {item.package_display}
+          <div className={`text-xs mt-0.5 ${item.package_suggestion === 'pantry' ? 'text-amber-600' : 'text-warm-gray'}`}>
+            {item.package_suggestion === 'pantry' ? item.package_display : `Buy: ${item.package_display}`}
           </div>
         )}
         {item.recipe_title && item.recipe_id && (
