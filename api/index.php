@@ -404,6 +404,25 @@ try {
             }
             break;
 
+        // ── Pantry Routes ────────────────────────────────────────────────
+        case 'pantry':
+            require_once __DIR__ . '/controllers/PantryController.php';
+            $controller = new PantryController();
+
+            if ($id === null) {
+                switch ($method) {
+                    case 'GET':
+                        $response = $controller->list();
+                        break;
+                    case 'POST':
+                        $response = $controller->add();
+                        break;
+                }
+            } elseif (is_numeric($id) && $method === 'DELETE') {
+                $response = $controller->remove((int) $id);
+            }
+            break;
+
         // ── Grocery Routes ──────────────────────────────────────────────
         case 'grocery':
             require_once __DIR__ . '/controllers/GroceryController.php';
