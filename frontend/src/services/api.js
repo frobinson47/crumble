@@ -432,3 +432,16 @@ export function activateLicense(key) {
 export function deactivateLicense() {
   return request('/license/deactivate', { method: 'POST' });
 }
+
+// Pantry
+export function getPantryItems() {
+  return request('/pantry');
+}
+
+export function addPantryItem(ingredientName) {
+  return request('/pantry', { method: 'POST', body: { ingredient_name: ingredientName } });
+}
+
+export function removePantryItem(id) {
+  return request(`/pantry/${id}`, { method: 'DELETE' });
+}
