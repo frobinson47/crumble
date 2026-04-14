@@ -11,6 +11,42 @@ class GroceryItem {
     }
 
     /**
+     * Normalize an ingredient name for consolidation matching.
+     * Strips quantities, qualifiers, prep instructions, and parentheticals
+     * to extract the core ingredient (e.g. "2 garlic cloves, minced" → "garlic").
+     */
+    public static function normalizeForMatch(string $name): string {
+        $n = strtolower(trim($name));
+        // Remove parenthetical info: "(minced)", "(with juice)", "(14.5oz)"
+        $n = preg_replace('/\s*\([^)]*\)/', '', $n);
+        // Remove text after comma (prep instructions like ", minced", ", chopped")
+        $n = preg_replace('/,.*$/', '', $n);
+        // Replace unicode fractions with ASCII
+        $n = str_replace(['½', '⅓', '¼', '¾', '⅔', '⅛'], ['1/2', '1/3', '1/4', '3/4', '2/3', '1/8'], $n);
+        // Remove leading quantities with units: "2 lb", "14 oz", "1 can", "1 1/2 cups"
+        $n = preg_replace('/^\d[\d\s\/.\-]*\s*(oz|lb|lbs|g|kg|ml|l|can|cans|cup|cups|tbsp|tsp|bunch|package|packages?|ears?)\b\s*/i', '', $n);
+        // Remove standalone leading numbers (e.g., "1 onion" → "onion", "4 medium potatoes" → "medium potatoes")
+        $n = preg_replace('/^\d[\d\s\/.\-]*\s+/', '', $n);
+        // Remove qualifiers (order matters — remove these before unit words)
+        $qualifiers = ['fresh', 'frozen', 'canned', 'dried', 'diced', 'crushed', 'sliced', 'chopped',
+            'minced', 'shredded', 'grated', 'whole', 'peeled', 'cooked', 'raw',
+            'boneless', 'skinless', 'smoked', 'roasted', 'toasted', 'melted', 'softened',
+            'unsalted', 'salted', 'small', 'medium', 'large', 'extra-large', 'thin', 'thick',
+            'extra-virgin', 'low-sodium', 'reduced-fat', 'fat-free', 'organic', 'packed',
+            'well', 'drained', 'rinsed', 'thawed', 'divided', 'kosher', 'into'];
+        foreach ($qualifiers as $q) {
+            $n = preg_replace('/\b' . preg_quote($q, '/') . '\b/i', '', $n);
+        }
+        // Remove unit-like count words: "cloves", "stalks", "heads", etc.
+        $n = preg_replace('/\b(cloves?|stalks?|heads?|ears?|sprigs?|pinch|dash|kernel|baking)\b/i', '', $n);
+        // Remove size/measurement fragments left behind: "1/2 inch pieces", etc.
+        $n = preg_replace('/\d[\d\/.\s]*(inch|inches|cm|mm)\s*\w*/i', '', $n);
+        // Collapse whitespace
+        $n = trim(preg_replace('/\s+/', ' ', $n));
+        return $n;
+    }
+
+    /**
      * Get all items for a grocery list, unchecked first then checked.
      */
     public function getAllForList(int $listId): array {
@@ -120,18 +156,27 @@ class GroceryItem {
         $existingStmt->execute([$listId]);
         $existingItems = $existingStmt->fetchAll();
 
-        // Index existing items by lowercase name
-        $existingByName = [];
+        // Index existing items by normalized name for smarter dedup
+        $existingByNormalized = [];
+        $existingByExact = [];
         foreach ($existingItems as $item) {
-            $existingByName[strtolower(trim($item['name']))] = $item;
+            $exact = strtolower(trim($item['name']));
+            $normalized = self::normalizeForMatch($item['name']);
+            $existingByExact[$exact] = $item;
+            if ($normalized !== '') {
+                $existingByNormalized[$normalized] = $item;
+            }
         }
 
         foreach ($ingredients as $ingredient) {
-            $key = strtolower(trim($ingredient['name']));
-            $inPantry = in_array($key, $pantryMatches, true);
+            $exactKey = strtolower(trim($ingredient['name']));
+            $normalizedKey = self::normalizeForMatch($ingredient['name']);
+            $inPantry = in_array($exactKey, $pantryMatches, true);
 
-            if (isset($existingByName[$key])) {
-                $existing = $existingByName[$key];
+            // Try exact match first, then normalized match
+            $existing = $existingByExact[$exactKey] ?? ($normalizedKey !== '' ? ($existingByNormalized[$normalizedKey] ?? null) : null);
+
+            if ($existing) {
                 $existingVal = UnitConverter::parseAmount($existing['amount']);
                 $newVal = UnitConverter::parseAmount($ingredient['amount']);
 
@@ -158,7 +203,10 @@ class GroceryItem {
                 }
             } else {
                 $newItem = $this->createWithPantry($listId, $ingredient['name'], $ingredient['amount'], $ingredient['unit'], $recipeId, $inPantry);
-                $existingByName[$key] = $newItem;
+                $existingByExact[$exactKey] = $newItem;
+                if ($normalizedKey !== '') {
+                    $existingByNormalized[$normalizedKey] = $newItem;
+                }
             }
         }
 

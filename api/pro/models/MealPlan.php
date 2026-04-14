@@ -275,9 +275,9 @@ class MealPlan {
         $list = $groceryListModel->create($listName, $userId);
         $listId = (int) $list['id'];
 
-        // Scale amounts first, then consolidate by name
+        // Scale amounts first, then consolidate by normalized name
         $groceryItemModel = new GroceryItem();
-        $consolidated = []; // key: lowercase name → ['name' => ..., 'amount' => float|null, 'unit' => ..., 'recipe_id' => ...]
+        $consolidated = []; // key: normalized name → ['name' => ..., 'amount' => float|null, 'unit' => ..., 'recipe_id' => ...]
 
         foreach ($ingredients as $ingredient) {
             $amount = $ingredient['amount'];
@@ -295,7 +295,9 @@ class MealPlan {
                 }
             }
 
-            $key = strtolower(trim($ingredient['name']));
+            // Use normalized name for consolidation key
+            $normalized = GroceryItem::normalizeForMatch($ingredient['name']);
+            $key = $normalized !== '' ? $normalized : strtolower(trim($ingredient['name']));
             $newVal = UnitConverter::parseAmount($amount);
 
             if (!isset($consolidated[$key])) {
