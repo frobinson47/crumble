@@ -8,12 +8,16 @@ A recipe manager that remembers how *you* cook — not just what you cook. Self-
 
 **Free (open source):**
 - Import recipes from any URL (auto-scrapes structured data)
+- Import from Mealie, Paprika, and Tandoor exports
 - Full-text search across titles, descriptions, and ingredients
 - Tags, favorites, and ratings
 - Cook Mode — step-by-step with timers, wake lock, and vibration alerts
+- Serving scaling — adjust servings and ingredients recalculate
 - Grocery lists with smart ingredient consolidation
 - Pantry tracking — mark always-stocked items, auto-detected on future lists
 - Shoppable quantities — converts recipe amounts to store-buyable packages
+- Recipe collections — organize recipes into named groups
+- Private recipes — mark recipes as only visible to you
 - Ingredient database with nutrition data and USDA lookup
 - Discover recipes from the web (search + import)
 - Cook logging and history
@@ -22,6 +26,7 @@ A recipe manager that remembers how *you* cook — not just what you cook. Self-
 
 **Pro ($29.99 one-time — launch special $9.99 until July 1, 2026):**
 - Meal planning with weekly drag-and-drop calendar
+- iCal export — sync meal plans to your calendar app
 - Grocery list generation from meal plans
 - Cook tracking stats, streaks, and forgotten favorites
 - Recipe annotations (margin notes)
