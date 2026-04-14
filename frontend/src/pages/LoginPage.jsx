@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CookingPot, AlertCircle, Eye, Github, Shield } from 'lucide-react';
+import { AlertCircle, Eye, Github, Shield } from 'lucide-react';
+import CookslateLogo from '../components/ui/CookslateLogo';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -78,8 +79,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-terracotta/10 mb-4">
-            <CookingPot size={36} className="text-terracotta" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <CookslateLogo size={64} className="text-terracotta" />
           </div>
           <h1 className="text-3xl font-bold text-brown font-display">Cookslate</h1>
           <p className="text-warm-gray mt-1">Your cozy recipe manager</p>

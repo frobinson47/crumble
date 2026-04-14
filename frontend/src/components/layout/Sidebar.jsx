@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, Settings, Database, Compass, Library } from 'lucide-react';
+import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, Settings, Database, Compass, Library } from 'lucide-react';
+import CookslateLogo from '../ui/CookslateLogo';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { useLicense } from '../../hooks/useLicense';
@@ -45,7 +46,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-cream-dark">
         <div className="flex items-center gap-2">
-          <CookingPot className="text-terracotta" size={32} />
+          <CookslateLogo size={32} className="text-terracotta" />
           <span className="text-2xl font-bold text-brown font-display">
             Cookslate
           </span>

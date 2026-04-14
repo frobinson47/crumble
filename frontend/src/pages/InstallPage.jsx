@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CookingPot, Check, X, Loader2 } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
+import CookslateLogo from '../components/ui/CookslateLogo';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 
@@ -84,7 +85,7 @@ export default function InstallPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <CookingPot size={48} className="text-terracotta mx-auto mb-3" />
+          <CookslateLogo size={48} className="text-terracotta mx-auto mb-3" />
           <h1 className="text-3xl font-bold font-display text-brown">Cookslate</h1>
           <p className="text-warm-gray mt-1">Let's get you set up</p>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Search, X, CookingPot, Sun, Moon, Monitor, Menu, BookOpen, TrendingUp, Upload, Shield, LogOut, User, Download, Compass, Database, Library } from 'lucide-react';
+import { Search, X, Sun, Moon, Monitor, Menu, BookOpen, TrendingUp, Upload, Shield, LogOut, User, Download, Compass, Database, Library } from 'lucide-react';
+import CookslateLogo from '../ui/CookslateLogo';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 
@@ -48,7 +49,7 @@ export default function Header({ onSearch }) {
       <div className="max-w-7xl mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2 md:gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-1.5 shrink-0">
-          <CookingPot className="text-terracotta" size={24} />
+          <CookslateLogo size={24} className="text-terracotta" />
           <span className="text-lg md:text-2xl font-bold text-brown font-display">
             Cookslate
           </span>
