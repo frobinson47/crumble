@@ -176,6 +176,10 @@ export default function LoginPage() {
             GitHub
           </a>
         </div>
+
+        <p className="text-center text-xs text-warm-gray/60 mt-4">
+          Cookslate is a product of <a href="https://www.fmrdigital.dev" className="hover:text-warm-gray">FMR Digital LLC</a> &middot; &copy; 2026 FMR Digital LLC &middot; All rights reserved.
+        </p>
       </div>
     </div>
   );
