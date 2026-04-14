@@ -25,6 +25,7 @@ import SettingsPage from './pages/SettingsPage';
 import IngredientDatabasePage from './pages/IngredientDatabasePage';
 import DiscoverPage from './pages/DiscoverPage';
 import InstallPage from './pages/InstallPage';
+import CollectionsPage from './pages/CollectionsPage';
 
 function ProRoute({ children }) {
   const { active, loading } = useLicense();
@@ -172,6 +173,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <IngredientDatabasePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/collections"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CollectionsPage />
                 </Layout>
               </ProtectedRoute>
             }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, Settings, Database, Compass } from 'lucide-react';
+import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, CookingPot, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, Settings, Database, Compass, Library } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { useLicense } from '../../hooks/useLicense';
@@ -19,6 +19,7 @@ export default function Sidebar() {
     { to: '/favorites', icon: Heart, label: 'Favorites' },
     ...(proActive ? [{ to: '/meal-plan', icon: CalendarDays, label: 'Meal Plan' }] : []),
     { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
+    { to: '/collections', icon: Library, label: 'Collections' },
     { to: '/discover', icon: Compass, label: 'Discover' },
     { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
     ...(proActive ? [{ to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' }] : []),

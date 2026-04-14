@@ -445,3 +445,32 @@ export function addPantryItem(ingredientName) {
 export function removePantryItem(id) {
   return request(`/pantry/${id}`, { method: 'DELETE' });
 }
+
+// Collections
+export function getCollections() {
+  return request('/collections');
+}
+
+export function getCollection(id) {
+  return request(`/collections/${id}`);
+}
+
+export function createCollection(name, description) {
+  return request('/collections', { method: 'POST', body: { name, description } });
+}
+
+export function updateCollection(id, name, description) {
+  return request(`/collections/${id}`, { method: 'PUT', body: { name, description } });
+}
+
+export function deleteCollection(id) {
+  return request(`/collections/${id}`, { method: 'DELETE' });
+}
+
+export function addRecipeToCollection(collectionId, recipeId) {
+  return request(`/collections/${collectionId}/recipes/${recipeId}`, { method: 'POST' });
+}
+
+export function removeRecipeFromCollection(collectionId, recipeId) {
+  return request(`/collections/${collectionId}/recipes/${recipeId}`, { method: 'DELETE' });
+}
