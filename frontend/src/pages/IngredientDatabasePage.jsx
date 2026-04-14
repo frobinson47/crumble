@@ -3,6 +3,7 @@ import { Search, Plus, Trash2, Database, Loader2, Pencil, ScanBarcode } from 'lu
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
+import BarcodeScanner from '../components/ui/BarcodeScanner';
 import * as api from '../services/api';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -85,13 +86,14 @@ export default function IngredientDatabasePage() {
     }
   };
 
-  const handleBarcodeLookup = async () => {
-    if (!barcodeInput.trim()) return;
+  const handleBarcodeLookup = async (codeOverride) => {
+    const code = (codeOverride || barcodeInput).trim();
+    if (!code) return;
     setBarcodeLoading(true);
     setBarcodeError('');
     setBarcodeResult(null);
     try {
-      const product = await api.lookupBarcode(barcodeInput.trim());
+      const product = await api.lookupBarcode(code);
       if (product.error) {
         setBarcodeError(product.error);
       } else {
@@ -295,9 +297,16 @@ export default function IngredientDatabasePage() {
       {/* Barcode Lookup Modal */}
       <Modal isOpen={showBarcode} onClose={() => setShowBarcode(false)} title="Barcode / UPC Lookup" size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-warm-gray">Enter a product barcode to look up nutrition data from Open Food Facts.</p>
+          <BarcodeScanner
+            onScan={(code) => { setBarcodeInput(code); handleBarcodeLookup(code); }}
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-cream-dark" />
+            <span className="text-xs text-warm-gray">or type manually</span>
+            <div className="flex-1 h-px bg-cream-dark" />
+          </div>
           <form onSubmit={e => { e.preventDefault(); handleBarcodeLookup(); }} className="flex gap-2">
-            <Input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} placeholder="e.g. 3017620422003" autoFocus />
+            <Input value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} placeholder="e.g. 3017620422003" />
             <Button type="submit" disabled={barcodeLoading}>
               {barcodeLoading ? <Loader2 size={16} className="animate-spin" /> : <ScanBarcode size={16} />}
             </Button>
