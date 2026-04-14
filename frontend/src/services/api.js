@@ -293,11 +293,10 @@ export function getTodayMeals() {
   return request('/meal-plan/today');
 }
 
-export function addMealPlanItem(recipeId, dayOfWeek, weekStart) {
-  return request('/meal-plan/items', {
-    method: 'POST',
-    body: { recipe_id: recipeId, day_of_week: dayOfWeek, week_start: weekStart },
-  });
+export function addMealPlanItem(recipeId, dayOfWeek, weekStart, mealType = null) {
+  const body = { recipe_id: recipeId, day_of_week: dayOfWeek, week_start: weekStart };
+  if (mealType) body.meal_type = mealType;
+  return request('/meal-plan/items', { method: 'POST', body });
 }
 
 export function updateMealPlanItem(itemId, data) {

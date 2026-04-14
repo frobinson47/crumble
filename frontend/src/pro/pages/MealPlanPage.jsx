@@ -106,7 +106,12 @@ function SortableMealItem({ item, onRemove, onMoveToDay, showMoveMenu }) {
           className="w-10 h-10 rounded-lg object-cover shrink-0"
         />
       )}
-      <span className="flex-1 text-sm font-medium text-brown truncate">{item.recipe.title}</span>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium text-brown truncate block">{item.recipe.title}</span>
+        {item.meal_type && (
+          <span className="text-[10px] text-warm-gray capitalize">{item.meal_type}</span>
+        )}
+      </div>
       <div className="flex items-center gap-0.5 shrink-0">
         {showMoveMenu && (
           <div className="relative">
@@ -201,6 +206,7 @@ export default function MealPlanPage() {
   const [grocerySuccess, setGrocerySuccess] = useState(null);
   const [activeMobileDay, setActiveMobileDay] = useState(() => getDefaultMobileDay(getMonday(new Date())));
   const [activeId, setActiveId] = useState(null);
+  const [selectedMealType, setSelectedMealType] = useState(null);
 
   const searchTimerRef = useRef(null);
 
@@ -438,6 +444,7 @@ export default function MealPlanPage() {
   // Add recipe to day
   const handleOpenSearch = (dayIndex) => {
     setSelectedDay(dayIndex);
+    setSelectedMealType(null);
     setSearchQuery('');
     setSearchResults([]);
     setShowRecipeSearch(true);
@@ -445,10 +452,11 @@ export default function MealPlanPage() {
 
   const handleAddRecipe = async (recipeId) => {
     try {
-      await api.addMealPlanItem(recipeId, selectedDay, weekStart);
+      await api.addMealPlanItem(recipeId, selectedDay, weekStart, selectedMealType);
       setShowRecipeSearch(false);
       setSearchQuery('');
       setSearchResults([]);
+      setSelectedMealType(null);
       await fetchPlan();
     } catch {
       // Error handled by api layer
@@ -681,6 +689,28 @@ export default function MealPlanPage() {
 
       {/* Recipe search modal */}
       <Modal isOpen={showRecipeSearch} onClose={() => setShowRecipeSearch(false)} title="Add Recipe" size="lg">
+        {/* Meal type picker */}
+        <div className="flex gap-1.5 mb-3">
+          {[
+            { value: null, label: 'Any' },
+            { value: 'breakfast', label: 'Breakfast' },
+            { value: 'lunch', label: 'Lunch' },
+            { value: 'dinner', label: 'Dinner' },
+            { value: 'snack', label: 'Snack' },
+          ].map(({ value, label }) => (
+            <button
+              key={label}
+              onClick={() => setSelectedMealType(value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                selectedMealType === value
+                  ? 'bg-terracotta text-white'
+                  : 'bg-cream text-brown-light hover:bg-cream-dark'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <input
           type="text"
           placeholder="Search recipes..."

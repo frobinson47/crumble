@@ -43,6 +43,7 @@ class MealPlanController {
         $recipeId = (int) $input['recipe_id'];
         $dayOfWeek = (int) $input['day_of_week'];
         $weekStart = $input['week_start'];
+        $mealType = isset($input['meal_type']) ? trim($input['meal_type']) : null;
 
         if ($dayOfWeek < 0 || $dayOfWeek > 6) {
             http_response_code(400);
@@ -54,7 +55,7 @@ class MealPlanController {
         $plan = $model->getByWeek($userId, $weekStart);
         $planId = $plan['id'];
 
-        $item = $model->addItem($planId, $recipeId, $dayOfWeek, $userId);
+        $item = $model->addItem($planId, $recipeId, $dayOfWeek, $userId, $mealType);
 
         if ($item === null) {
             http_response_code(404);

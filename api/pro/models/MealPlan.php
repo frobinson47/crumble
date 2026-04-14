@@ -30,7 +30,7 @@ class MealPlan {
 
         // Fetch all items for this plan with recipe data
         $itemStmt = $this->db->prepare('
-            SELECT mpi.id, mpi.recipe_id, mpi.day_of_week, mpi.sort_order, mpi.servings_override,
+            SELECT mpi.id, mpi.recipe_id, mpi.day_of_week, mpi.meal_type, mpi.sort_order, mpi.servings_override,
                    r.id AS r_id, r.title, r.image_path, r.servings, r.prep_time, r.cook_time
             FROM meal_plan_items mpi
             INNER JOIN recipes r ON mpi.recipe_id = r.id
@@ -46,6 +46,7 @@ class MealPlan {
                 'id' => (int) $row['id'],
                 'recipe_id' => (int) $row['recipe_id'],
                 'day_of_week' => (int) $row['day_of_week'],
+                'meal_type' => $row['meal_type'],
                 'sort_order' => (int) $row['sort_order'],
                 'servings_override' => $row['servings_override'] !== null ? (int) $row['servings_override'] : null,
                 'recipe' => [
@@ -110,7 +111,7 @@ class MealPlan {
      * Add a recipe to a meal plan day.
      * Returns the new item with recipe data, or null if unauthorized.
      */
-    public function addItem(int $planId, int $recipeId, int $dayOfWeek, int $userId): ?array {
+    public function addItem(int $planId, int $recipeId, int $dayOfWeek, int $userId, ?string $mealType = null): ?array {
         // Verify plan ownership
         $stmt = $this->db->prepare('SELECT user_id FROM meal_plans WHERE id = ?');
         $stmt->execute([$planId]);
@@ -134,17 +135,26 @@ class MealPlan {
         $sortStmt->execute([$planId, $dayOfWeek]);
         $sortOrder = (int) $sortStmt->fetchColumn();
 
+        // Validate meal_type
+        $validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+        if ($mealType !== null && !in_array(strtolower($mealType), $validMealTypes)) {
+            $mealType = null;
+        }
+        if ($mealType !== null) {
+            $mealType = strtolower($mealType);
+        }
+
         // Insert item
         $insertStmt = $this->db->prepare('
-            INSERT INTO meal_plan_items (plan_id, recipe_id, day_of_week, sort_order)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO meal_plan_items (plan_id, recipe_id, day_of_week, meal_type, sort_order)
+            VALUES (?, ?, ?, ?, ?)
         ');
-        $insertStmt->execute([$planId, $recipeId, $dayOfWeek, $sortOrder]);
+        $insertStmt->execute([$planId, $recipeId, $dayOfWeek, $mealType, $sortOrder]);
         $itemId = (int) $this->db->lastInsertId();
 
         // Return with recipe data
         $fetchStmt = $this->db->prepare('
-            SELECT mpi.id, mpi.recipe_id, mpi.day_of_week, mpi.sort_order, mpi.servings_override,
+            SELECT mpi.id, mpi.recipe_id, mpi.day_of_week, mpi.meal_type, mpi.sort_order, mpi.servings_override,
                    r.id AS r_id, r.title, r.image_path, r.servings, r.prep_time, r.cook_time
             FROM meal_plan_items mpi
             INNER JOIN recipes r ON mpi.recipe_id = r.id
@@ -161,6 +171,7 @@ class MealPlan {
             'id' => (int) $item['id'],
             'recipe_id' => (int) $item['recipe_id'],
             'day_of_week' => (int) $item['day_of_week'],
+            'meal_type' => $item['meal_type'],
             'sort_order' => (int) $item['sort_order'],
             'servings_override' => $item['servings_override'] !== null ? (int) $item['servings_override'] : null,
             'recipe' => [
@@ -193,7 +204,7 @@ class MealPlan {
         }
 
         // Build dynamic update
-        $allowed = ['day_of_week', 'sort_order', 'servings_override'];
+        $allowed = ['day_of_week', 'meal_type', 'sort_order', 'servings_override'];
         $sets = [];
         $values = [];
 

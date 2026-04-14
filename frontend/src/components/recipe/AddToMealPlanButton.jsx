@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { CalendarPlus, Check } from 'lucide-react';
+import { CalendarPlus, Check, ChevronLeft } from 'lucide-react';
 import { useLicense } from '../../hooks/useLicense';
 import * as api from '../../services/api';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner'];
+const DAY_NAMES_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MEAL_TYPES = [
+  { value: 'breakfast', label: 'Breakfast', icon: '🌅' },
+  { value: 'lunch', label: 'Lunch', icon: '☀️' },
+  { value: 'dinner', label: 'Dinner', icon: '🌙' },
+  { value: 'snack', label: 'Snack', icon: '🍿' },
+];
 
 function getMonday(date) {
   const d = new Date(date);
@@ -23,6 +29,7 @@ function getDayDate(mondayStr, dayIndex) {
 export default function AddToMealPlanButton({ recipeId, variant = 'overlay', className = '' }) {
   const { active: proActive } = useLicense();
   const [open, setOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
   const [adding, setAdding] = useState(false);
   const [success, setSuccess] = useState(null);
 
@@ -31,15 +38,23 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
   const weekStart = getMonday(new Date());
   const today = new Date();
 
-  const handleAdd = async (e, dayIndex) => {
+  const handleSelectDay = (e, dayIndex) => {
     e.preventDefault();
     e.stopPropagation();
+    setSelectedDay(dayIndex);
+  };
+
+  const handleAdd = async (e, mealType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (selectedDay === null) return;
     setAdding(true);
     try {
-      await api.addMealPlanItem(recipeId, dayIndex, weekStart);
-      const dayDate = getDayDate(weekStart, dayIndex);
-      setSuccess(DAY_NAMES[dayIndex] + ' ' + dayDate.getDate());
-      setTimeout(() => { setSuccess(null); setOpen(false); }, 1200);
+      await api.addMealPlanItem(recipeId, selectedDay, weekStart, mealType);
+      const dayDate = getDayDate(weekStart, selectedDay);
+      const meal = MEAL_TYPES.find(m => m.value === mealType);
+      setSuccess(`${DAY_NAMES[selectedDay]} ${dayDate.getDate()} ${meal ? meal.label : ''}`);
+      setTimeout(() => { setSuccess(null); setOpen(false); setSelectedDay(null); }, 1200);
     } catch {
       // handled by api layer
     } finally {
@@ -52,13 +67,85 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
     e.stopPropagation();
     setOpen(!open);
     setSuccess(null);
+    setSelectedDay(null);
   };
 
   const handleClose = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setOpen(false);
+    setSelectedDay(null);
   };
+
+  const handleBack = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedDay(null);
+  };
+
+  const renderPopover = (position) => (
+    <>
+      <div className="fixed inset-0 z-10" onClick={handleClose} />
+      <div className={`absolute ${position} z-20 bg-surface rounded-xl shadow-lg border border-cream-dark p-2 min-w-[200px]`}>
+        {success ? (
+          <div className="flex items-center gap-2 px-3 py-2 text-sm text-sage font-medium">
+            <Check size={14} />
+            Added to {success}
+          </div>
+        ) : selectedDay === null ? (
+          <>
+            <p className="text-xs text-warm-gray px-2 py-1 font-semibold">Pick a day</p>
+            <div className="grid grid-cols-7 gap-0.5 mt-1">
+              {DAY_NAMES.map((name, idx) => {
+                const dayDate = getDayDate(weekStart, idx);
+                const isToday = today.toDateString() === dayDate.toDateString();
+                return (
+                  <button
+                    key={idx}
+                    onClick={(e) => handleSelectDay(e, idx)}
+                    className={`flex flex-col items-center py-1.5 px-1 rounded-lg text-xs transition-colors hover:bg-terracotta/10 hover:text-terracotta ${
+                      isToday ? 'text-terracotta font-bold' : 'text-brown'
+                    }`}
+                  >
+                    <span className="font-semibold">{name.charAt(0)}</span>
+                    <span>{dayDate.getDate()}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-1 px-1 mb-1">
+              <button
+                onClick={handleBack}
+                className="p-1 rounded-lg text-warm-gray hover:text-brown hover:bg-cream-dark transition-colors"
+                aria-label="Back to day picker"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <p className="text-xs text-warm-gray font-semibold">
+                {DAY_NAMES_FULL[selectedDay]} — which meal?
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              {MEAL_TYPES.map((meal) => (
+                <button
+                  key={meal.value}
+                  onClick={(e) => handleAdd(e, meal.value)}
+                  disabled={adding}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-brown hover:bg-terracotta/10 hover:text-terracotta transition-colors text-left"
+                >
+                  <span>{meal.icon}</span>
+                  <span className="font-medium">{meal.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
 
   if (variant === 'overlay') {
     return (
@@ -71,42 +158,7 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
         >
           <CalendarPlus size={14} />
         </button>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={handleClose} />
-            <div className="absolute bottom-full right-0 mb-2 z-20 bg-surface rounded-xl shadow-lg border border-cream-dark p-2 min-w-[180px]">
-              {success ? (
-                <div className="flex items-center gap-2 px-3 py-2 text-sm text-sage font-medium">
-                  <Check size={14} />
-                  Added to {success}
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-warm-gray px-2 py-1 font-semibold">Add to this week</p>
-                  <div className="grid grid-cols-7 gap-0.5 mt-1">
-                    {DAY_NAMES.map((name, idx) => {
-                      const dayDate = getDayDate(weekStart, idx);
-                      const isToday = today.toDateString() === dayDate.toDateString();
-                      return (
-                        <button
-                          key={idx}
-                          onClick={(e) => handleAdd(e, idx)}
-                          disabled={adding}
-                          className={`flex flex-col items-center py-1.5 px-1 rounded-lg text-xs transition-colors hover:bg-terracotta/10 hover:text-terracotta ${
-                            isToday ? 'text-terracotta font-bold' : 'text-brown'
-                          }`}
-                        >
-                          <span className="font-semibold">{name.charAt(0)}</span>
-                          <span>{dayDate.getDate()}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          </>
-        )}
+        {open && renderPopover('bottom-full right-0 mb-2')}
       </div>
     );
   }
@@ -121,42 +173,7 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
         <CalendarPlus size={18} />
         Add to Meal Plan
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={handleClose} />
-          <div className="absolute top-full left-0 mt-2 z-20 bg-surface rounded-xl shadow-lg border border-cream-dark p-3 min-w-[220px]">
-            {success ? (
-              <div className="flex items-center gap-2 px-2 py-2 text-sm text-sage font-medium">
-                <Check size={16} />
-                Added to {success}
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-warm-gray font-semibold mb-2">Pick a day this week</p>
-                <div className="grid grid-cols-7 gap-1">
-                  {DAY_NAMES.map((name, idx) => {
-                    const dayDate = getDayDate(weekStart, idx);
-                    const isToday = today.toDateString() === dayDate.toDateString();
-                    return (
-                      <button
-                        key={idx}
-                        onClick={(e) => handleAdd(e, idx)}
-                        disabled={adding}
-                        className={`flex flex-col items-center py-2 px-1 rounded-lg text-xs transition-colors hover:bg-terracotta/10 hover:text-terracotta ${
-                          isToday ? 'text-terracotta font-bold bg-terracotta/5' : 'text-brown'
-                        }`}
-                      >
-                        <span className="font-semibold">{name}</span>
-                        <span className="text-sm">{dayDate.getDate()}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        </>
-      )}
+      {open && renderPopover('top-full left-0 mt-2')}
     </div>
   );
 }
