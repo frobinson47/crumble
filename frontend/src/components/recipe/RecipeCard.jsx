@@ -4,6 +4,7 @@ import { Clock, Users, UtensilsCrossed, ChefHat, Flame } from 'lucide-react';
 import TagBadge from '../ui/TagBadge';
 import StarRating from '../ui/StarRating';
 import FavoriteButton from './FavoriteButton';
+import AddToMealPlanButton from './AddToMealPlanButton';
 import { thumbImageUrl } from '../../utils/imageUrl';
 import { estimateDifficulty, DIFFICULTY_COLORS } from '../../utils/recipeDifficulty';
 
@@ -38,6 +39,9 @@ export default function RecipeCard({ recipe }) {
           size="sm"
           overlay
         />
+
+        {/* Meal plan overlay */}
+        <AddToMealPlanButton recipeId={recipe.id} variant="overlay" />
 
         {/* Time badge */}
         {totalTime > 0 && (

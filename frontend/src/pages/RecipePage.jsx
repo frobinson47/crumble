@@ -23,6 +23,7 @@ import { fullImageUrl } from '../utils/imageUrl';
 import StarRating from '../components/ui/StarRating';
 import FavoriteButton from '../components/recipe/FavoriteButton';
 import CookButton from '../components/recipe/CookButton';
+import AddToMealPlanButton from '../components/recipe/AddToMealPlanButton';
 import * as api from '../services/api';
 import RelatedRecipes from '../components/recipe/RelatedRecipes';
 import NutritionFacts from '../components/recipe/NutritionFacts';
@@ -404,6 +405,7 @@ export default function RecipePage() {
           <ShoppingCart size={18} />
           Add to Grocery List
         </Button>
+        <AddToMealPlanButton recipeId={recipe.id} variant="button" />
         <Button
           variant="outline"
           onClick={() => window.print()}
