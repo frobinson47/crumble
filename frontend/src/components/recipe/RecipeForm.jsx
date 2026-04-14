@@ -42,6 +42,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
   const [fat, setFat] = useState('');
   const [fiber, setFiber] = useState('');
   const [sugar, setSugar] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
   const [autoNutritionLoading, setAutoNutritionLoading] = useState(false);
   const [pasteRecipeMode, setPasteRecipeMode] = useState(false);
@@ -160,6 +161,8 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
         setFiber(String(initialData.fiber || ''));
         setSugar(String(initialData.sugar || ''));
       }
+
+      setIsPrivate(Boolean(initialData.is_private));
     }
   }, [initialData]);
 
@@ -354,6 +357,7 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
       fat: fat.trim() || null,
       fiber: fiber.trim() || null,
       sugar: sugar.trim() || null,
+      is_private: isPrivate,
     };
 
     // Include source image URL from import (if no local image file was chosen)
@@ -879,6 +883,18 @@ export default function RecipeForm({ initialData, onSubmit, isLoading, submitLab
             </div>
           )}
         </div>
+      </div>
+
+      {/* Private toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setIsPrivate(!isPrivate)}
+          className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${isPrivate ? 'bg-terracotta' : 'bg-cream-dark'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${isPrivate ? 'translate-x-5' : ''}`} />
+        </button>
+        <span className="text-sm text-brown-light">Private recipe — only visible to you</span>
       </div>
 
       {/* Submit */}

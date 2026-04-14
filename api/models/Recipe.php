@@ -39,10 +39,12 @@ class Recipe {
             $params[] = $tag;
         }
 
-        $whereClause = '';
-        if (!empty($where)) {
-            $whereClause = 'WHERE ' . implode(' AND ', $where);
-        }
+        // Always filter out private recipes from other users
+        $userId = $_SESSION['user_id'] ?? null;
+        $where[] = '(r.is_private = 0 OR r.created_by = ?)';
+        $params[] = $userId;
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
 
         // Count total
         $countSql = "SELECT COUNT(*) FROM recipes r $whereClause";
@@ -52,7 +54,6 @@ class Recipe {
 
         // Fetch page
         $offset = ($page - 1) * $perPage;
-        $userId = $_SESSION['user_id'] ?? null;
 
         // When searching, order by relevance (title/desc matches first, then ingredient/tag matches)
         // When not searching, order by newest first
@@ -67,7 +68,7 @@ class Recipe {
 
         $sql = "
             SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
-                   r.image_path, r.calories, r.created_at, r.updated_at, r.created_by,
+                   r.image_path, r.calories, r.is_private, r.created_at, r.updated_at, r.created_by,
                    u.username AS author,
                    (SELECT COUNT(*) FROM ingredients i WHERE i.recipe_id = r.id) AS ingredient_count,
                    (SELECT ROUND(AVG(rt.score), 1) FROM ratings rt WHERE rt.recipe_id = r.id) AS avg_rating,
@@ -220,8 +221,8 @@ class Recipe {
         try {
             // Insert recipe
             $stmt = $this->db->prepare('
-                INSERT INTO recipes (title, description, prep_time, cook_time, servings, source_url, image_path, instructions, created_by, calories, protein, carbs, fat, fiber, sugar)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO recipes (title, description, prep_time, cook_time, servings, source_url, image_path, instructions, created_by, calories, protein, carbs, fat, fiber, sugar, is_private)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $instructions = is_array($data['instructions'] ?? null) ? json_encode($data['instructions']) : ($data['instructions'] ?? '[]');
             $stmt->execute([
@@ -240,6 +241,7 @@ class Recipe {
                 $data['fat'] ?? null,
                 $data['fiber'] ?? null,
                 $data['sugar'] ?? null,
+                isset($data['is_private']) ? (int)(bool)$data['is_private'] : 0,
             ]);
             $recipeId = (int) $this->db->lastInsertId();
 
@@ -305,7 +307,7 @@ class Recipe {
 
         try {
             // Build dynamic UPDATE for recipe fields
-            $allowed = ['title', 'description', 'prep_time', 'cook_time', 'servings', 'source_url', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar'];
+            $allowed = ['title', 'description', 'prep_time', 'cook_time', 'servings', 'source_url', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'is_private'];
             $sets = [];
             $values = [];
 
