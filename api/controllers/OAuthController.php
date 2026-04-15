@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/env.php';
+require_once __DIR__ . '/../services/LoggerService.php';
 
 /**
  * URL-safe base64 encode (no +/= characters that break in URLs).
@@ -166,6 +167,8 @@ class OAuthController
         $_SESSION['role'] = $user['role'];
         $_SESSION['is_demo'] = false;
 
+        LoggerService::channel('auth')->info('OAuth login successful', ['user_id' => $user['id'], 'username' => $username]);
+
         // Redirect to frontend
         header('Location: /');
         exit;
@@ -212,6 +215,7 @@ class OAuthController
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken],
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
 
         $caBundle = getCaBundlePath();
@@ -242,6 +246,7 @@ class OAuthController
             CURLOPT_POSTFIELDS => $postFields,
             CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
 
         $caBundle = getCaBundlePath();

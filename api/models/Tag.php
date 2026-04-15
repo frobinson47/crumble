@@ -19,6 +19,7 @@ class Tag {
             LEFT JOIN recipe_tags rt ON t.id = rt.tag_id
             GROUP BY t.id, t.name
             ORDER BY t.name ASC
+            LIMIT 1000
         ';
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();

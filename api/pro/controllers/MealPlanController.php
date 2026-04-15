@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../models/MealPlan.php';
 require_once __DIR__ . '/../../middleware/Auth.php';
+require_once __DIR__ . '/../../services/ValidationHelper.php';
 
 class MealPlanController {
 
@@ -12,6 +13,11 @@ class MealPlanController {
     public function getWeekPlan(): array {
         $userId = Auth::requireAuth();
         $week = $_GET['week'] ?? date('Y-m-d');
+        $v = new ValidationHelper();
+        $v->date($week, 'week');
+        if ($v->fails()) {
+            $week = date('Y-m-d');
+        }
 
         $model = new MealPlan();
         return $model->getByWeek($userId, $week);
@@ -45,10 +51,15 @@ class MealPlanController {
         $weekStart = $input['week_start'];
         $mealType = isset($input['meal_type']) ? trim($input['meal_type']) : null;
 
-        if ($dayOfWeek < 0 || $dayOfWeek > 6) {
-            http_response_code(400);
-            return ['error' => 'day_of_week must be 0-6', 'code' => 400];
+        $v = new ValidationHelper();
+        $v->date($weekStart, 'week_start')
+          ->range($dayOfWeek, 'day_of_week', 0, 6);
+        if ($mealType !== null) {
+            $v->inList($mealType, 'meal_type', ['breakfast', 'lunch', 'dinner', 'snack'])
+              ->maxLength($mealType, 'meal_type', 20);
         }
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         // Get or create the plan for this week
         $model = new MealPlan();
@@ -109,6 +120,11 @@ class MealPlanController {
     public function exportICal(): void {
         $userId = Auth::requireAuth();
         $week = $_GET['week'] ?? date('Y-m-d');
+        $v = new ValidationHelper();
+        $v->date($week, 'week');
+        if ($v->fails()) {
+            $week = date('Y-m-d');
+        }
 
         $model = new MealPlan();
         $plan = $model->getByWeek($userId, $week);

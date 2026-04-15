@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/LoggerService.php';
 
 class ImageProcessor {
 
@@ -127,6 +128,7 @@ class ImageProcessor {
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 15,
+                CURLOPT_CONNECTTIMEOUT => 5,
                 CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 CURLOPT_SSL_VERIFYPEER => true,
             ]);
@@ -139,9 +141,11 @@ class ImageProcessor {
 
             $imageData = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
             if ($imageData === false || $httpCode !== 200) {
+                LoggerService::channel('image')->error('Failed to download image', ['url' => $url, 'http_code' => $httpCode, 'curl_error' => $curlError]);
                 return null;
             }
         } else {

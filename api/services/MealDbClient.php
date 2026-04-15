@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/LoggerService.php';
+
 /**
  * TheMealDB API client.
  * Free API for recipe discovery and inspiration.
@@ -193,6 +195,7 @@ class MealDbClient
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
@@ -206,6 +209,7 @@ class MealDbClient
         curl_close($ch);
 
         if ($httpCode !== 200 || $response === false) {
+            LoggerService::channel('mealdb')->error('MealDB API request failed', ['http_code' => $httpCode, 'endpoint' => $endpoint]);
             return [];
         }
 

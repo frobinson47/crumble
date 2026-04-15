@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../middleware/Auth.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
+require_once __DIR__ . '/../services/LoggerService.php';
 
 class UserController {
 
@@ -24,16 +26,22 @@ class UserController {
 
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['username']) || empty($input['password'])) {
-            http_response_code(400);
-            return ['error' => 'Username and password are required', 'code' => 400];
+        $v = new ValidationHelper();
+        $v->required($input['username'] ?? null, 'username')
+          ->minLength($input['username'] ?? null, 'username', 3)
+          ->maxLength($input['username'] ?? null, 'username', 50)
+          ->required($input['password'] ?? null, 'password')
+          ->maxLength($input['password'] ?? null, 'password', 500)
+          ->inList($input['role'] ?? 'member', 'role', ['admin', 'member']);
+
+        if (!empty($input['email'])) {
+            $v->email($input['email'], 'email')->maxLength($input['email'], 'email', 255);
         }
 
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
+
         $role = $input['role'] ?? 'member';
-        if (!in_array($role, ['admin', 'member'])) {
-            http_response_code(400);
-            return ['error' => 'Role must be admin or member', 'code' => 400];
-        }
 
         // Enforce user limit based on license tier
         require_once __DIR__ . '/../config/license.php';
@@ -71,6 +79,7 @@ class UserController {
 
         $email = !empty($input['email']) ? trim($input['email']) : null;
         $user = $userModel->create($input['username'], $input['password'], $role, $email);
+        LoggerService::channel('user')->info('User created', ['user_id' => $user['id'], 'username' => $input['username'], 'role' => $role]);
         http_response_code(201);
         return $user;
     }
@@ -92,13 +101,16 @@ class UserController {
             return ['error' => 'User not found', 'code' => 404];
         }
 
+        $v = new ValidationHelper();
+        $v->inList($input['role'] ?? $user['role'], 'role', ['admin', 'member']);
+        if (isset($input['email']) && $input['email'] !== '') {
+            $v->email($input['email'], 'email')->maxLength($input['email'], 'email', 255);
+        }
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
+
         $email = isset($input['email']) ? trim($input['email']) : $user['email'];
         $role = $input['role'] ?? $user['role'];
-
-        if (!in_array($role, ['admin', 'member'])) {
-            http_response_code(400);
-            return ['error' => 'Role must be admin or member', 'code' => 400];
-        }
 
         $userModel->update($id, $email ?: null, $role);
         return $userModel->findById($id);
@@ -126,6 +138,7 @@ class UserController {
         }
 
         $userModel->delete($id);
+        LoggerService::channel('user')->info('User deleted', ['deleted_user_id' => $id, 'by_user_id' => $_SESSION['user_id'] ?? null]);
         return ['message' => 'User deleted successfully'];
     }
 

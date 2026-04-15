@@ -3,6 +3,8 @@
 require_once __DIR__ . '/../models/GroceryList.php';
 require_once __DIR__ . '/../models/GroceryItem.php';
 require_once __DIR__ . '/../middleware/Auth.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
+require_once __DIR__ . '/../services/LoggerService.php';
 
 class GroceryController {
 
@@ -24,13 +26,15 @@ class GroceryController {
         $userId = Auth::requireAuth();
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['name'])) {
-            http_response_code(400);
-            return ['error' => 'List name is required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['name'] ?? null, 'name')
+          ->maxLength($input['name'] ?? null, 'name', 255);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         $listModel = new GroceryList();
-        $list = $listModel->create($input['name'], $userId);
+        $list = $listModel->create(ValidationHelper::sanitize($input['name'], 255), $userId);
+        LoggerService::channel('grocery')->info('Grocery list created', ['list_id' => $list['id'], 'user_id' => $userId]);
         http_response_code(201);
         return $list;
     }
@@ -94,14 +98,22 @@ class GroceryController {
 
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['name'])) {
-            http_response_code(400);
-            return ['error' => 'Item name is required', 'code' => 400];
+        $v = new ValidationHelper();
+        $v->required($input['name'] ?? null, 'name')
+          ->maxLength($input['name'] ?? null, 'name', 500);
+        if (isset($input['amount']) && $input['amount'] !== null) {
+            $v->numeric($input['amount'], 'amount')
+              ->range($input['amount'], 'amount', 0, 99999);
         }
+        if (isset($input['unit'])) {
+            $v->maxLength($input['unit'], 'unit', 50);
+        }
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
-        $name = $input['name'];
+        $name = ValidationHelper::sanitize($input['name'], 500);
         $amount = $input['amount'] ?? null;
-        $unit = $input['unit'] ?? null;
+        $unit = ValidationHelper::sanitize($input['unit'] ?? null, 50);
 
         // Smart parse: if no amount/unit provided, try to extract from name
         if ($amount === null && $unit === null) {
@@ -136,6 +148,19 @@ class GroceryController {
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
+
+        $v = new ValidationHelper();
+        if (isset($input['name'])) {
+            $v->maxLength($input['name'], 'name', 500);
+        }
+        if (isset($input['amount']) && $input['amount'] !== null) {
+            $v->numeric($input['amount'], 'amount');
+        }
+        if (isset($input['unit'])) {
+            $v->maxLength($input['unit'], 'unit', 50);
+        }
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         $itemModel = new GroceryItem();
         $item = $itemModel->findById($itemId);

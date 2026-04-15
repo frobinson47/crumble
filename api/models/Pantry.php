@@ -11,7 +11,7 @@ class Pantry {
     }
 
     public function getAllForUser(int $userId): array {
-        $stmt = $this->db->prepare('SELECT id, user_id, ingredient_name, always_stocked, created_at FROM pantry WHERE user_id = ? ORDER BY ingredient_name ASC');
+        $stmt = $this->db->prepare('SELECT id, user_id, ingredient_name, always_stocked, created_at FROM pantry WHERE user_id = ? ORDER BY ingredient_name ASC LIMIT 1000');
         $stmt->execute([$userId]);
         return $stmt->fetchAll();
     }

@@ -126,9 +126,9 @@ if ($method === 'POST') {
     }
 
     // Run schema (skip if tables already exist — Docker entrypoint may have applied it)
-    $tablesExist = (int) $pdo->query(
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbName' AND table_name='recipes'"
-    )->fetchColumn();
+    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=? AND table_name='recipes'");
+    $checkStmt->execute([$dbName]);
+    $tablesExist = (int) $checkStmt->fetchColumn();
 
     if (!$tablesExist) {
         $schemaPath = __DIR__ . '/../database/schema.sql';

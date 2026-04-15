@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/LoggerService.php';
+
 /**
  * Open Food Facts API client.
  * Free, crowdsourced database of packaged food products.
@@ -91,6 +93,7 @@ class OpenFoodFactsClient
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_USERAGENT => 'Cookslate/1.0 (https://cookslate.app)',
         ]);
@@ -105,6 +108,7 @@ class OpenFoodFactsClient
         curl_close($ch);
 
         if ($httpCode !== 200 || $response === false) {
+            LoggerService::channel('openfoodfacts')->error('Open Food Facts API request failed', ['http_code' => $httpCode, 'endpoint' => $endpoint]);
             return null;
         }
 

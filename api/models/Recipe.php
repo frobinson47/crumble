@@ -575,20 +575,30 @@ class Recipe {
      * Export all recipes with ingredients and tags for data portability.
      * Returns a clean array suitable for JSON export.
      */
-    public function exportAll(): array {
-        $stmt = $this->db->query('
+    public function exportAll(int $limit = 10000): array {
+        $stmt = $this->db->prepare('
             SELECT r.id, r.title, r.description, r.prep_time, r.cook_time, r.servings,
                    r.source_url, r.image_path, r.instructions,
                    r.calories, r.protein, r.carbs, r.fat, r.fiber, r.sugar,
                    r.created_at, r.updated_at
             FROM recipes r
             ORDER BY r.id ASC
+            LIMIT ?
         ');
+        $stmt->execute([$limit]);
         $recipes = $stmt->fetchAll();
 
-        // Batch-fetch all ingredients and tags
+        if (empty($recipes)) {
+            return [];
+        }
+
+        // Batch-fetch ingredients and tags only for exported recipes
+        $recipeIds = array_column($recipes, 'id');
+        $placeholders = implode(',', array_fill(0, count($recipeIds), '?'));
+
         $allIngredients = [];
-        $ingStmt = $this->db->query('SELECT recipe_id, name, amount, unit, sort_order FROM ingredients ORDER BY recipe_id, sort_order');
+        $ingStmt = $this->db->prepare("SELECT recipe_id, name, amount, unit, sort_order FROM ingredients WHERE recipe_id IN ($placeholders) ORDER BY recipe_id, sort_order");
+        $ingStmt->execute($recipeIds);
         foreach ($ingStmt->fetchAll() as $ing) {
             $allIngredients[$ing['recipe_id']][] = [
                 'name' => $ing['name'],
@@ -599,12 +609,14 @@ class Recipe {
         }
 
         $allTags = [];
-        $tagStmt = $this->db->query('
+        $tagStmt = $this->db->prepare("
             SELECT rt.recipe_id, t.name
             FROM recipe_tags rt
             INNER JOIN tags t ON rt.tag_id = t.id
+            WHERE rt.recipe_id IN ($placeholders)
             ORDER BY rt.recipe_id, t.name
-        ');
+        ");
+        $tagStmt->execute($recipeIds);
         foreach ($tagStmt->fetchAll() as $tag) {
             $allTags[$tag['recipe_id']][] = $tag['name'];
         }

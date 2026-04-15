@@ -48,6 +48,7 @@ class CookLog {
             FROM cook_log
             WHERE user_id = ? AND recipe_id = ?
             ORDER BY cooked_at DESC
+            LIMIT 500
         ');
         $stmt->execute([$userId, $recipeId]);
         return $stmt->fetchAll();

@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/LoggerService.php';
+
 /**
  * USDA FoodData Central API client.
  * Searches for foods and returns nutrition data per 100g.
@@ -94,6 +96,7 @@ class UsdaLookup
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
@@ -107,6 +110,7 @@ class UsdaLookup
         curl_close($ch);
 
         if ($httpCode !== 200 || $response === false) {
+            LoggerService::channel('usda')->error('USDA API request failed', ['http_code' => $httpCode]);
             return null;
         }
 

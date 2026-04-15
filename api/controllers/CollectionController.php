@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../models/Collection.php';
 require_once __DIR__ . '/../middleware/Auth.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
 
 class CollectionController {
 
@@ -46,13 +47,19 @@ class CollectionController {
         $userId = Auth::requireAuth();
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['name'])) {
-            http_response_code(400);
-            return ['error' => 'Collection name is required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['name'] ?? null, 'name')
+          ->maxLength($input['name'] ?? null, 'name', 255)
+          ->maxLength($input['description'] ?? null, 'description', 1000);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         $model = new Collection();
-        $collection = $model->create($input['name'], $userId, $input['description'] ?? null);
+        $collection = $model->create(
+            ValidationHelper::sanitize($input['name'], 255),
+            $userId,
+            ValidationHelper::sanitize($input['description'] ?? null, 1000)
+        );
         http_response_code(201);
         return $collection;
     }
@@ -72,12 +79,18 @@ class CollectionController {
 
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['name'])) {
-            http_response_code(400);
-            return ['error' => 'Collection name is required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['name'] ?? null, 'name')
+          ->maxLength($input['name'] ?? null, 'name', 255)
+          ->maxLength($input['description'] ?? null, 'description', 1000);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
-        return $model->update($id, $input['name'], $input['description'] ?? null);
+        return $model->update(
+            $id,
+            ValidationHelper::sanitize($input['name'], 255),
+            ValidationHelper::sanitize($input['description'] ?? null, 1000)
+        );
     }
 
     /**

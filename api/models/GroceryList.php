@@ -22,6 +22,7 @@ class GroceryList {
             WHERE gl.created_by = ?
             GROUP BY gl.id
             ORDER BY gl.created_at DESC
+            LIMIT 200
         ';
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);

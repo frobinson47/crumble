@@ -45,9 +45,10 @@ class User {
 
     /**
      * Get all users (without password hashes).
+     * Limited to 500 users as a safety bound.
      */
     public function getAll(): array {
-        $stmt = $this->db->query('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC');
+        $stmt = $this->db->query('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 500');
         return $stmt->fetchAll();
     }
 

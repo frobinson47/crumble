@@ -16,6 +16,7 @@ class Collection {
             FROM collections c
             WHERE c.created_by = ?
             ORDER BY c.name ASC
+            LIMIT 200
         ');
         $stmt->execute([$userId]);
         return $stmt->fetchAll();
@@ -63,7 +64,7 @@ class Collection {
         $stmt->execute([$recipeId, $collectionId]);
     }
 
-    public function getRecipes(int $collectionId): array {
+    public function getRecipes(int $collectionId, int $limit = 500): array {
         $stmt = $this->db->prepare('
             SELECT r.id, r.title, r.description, r.image_path, r.servings, r.prep_time, r.cook_time,
                    r.created_at, r.calories
@@ -71,8 +72,9 @@ class Collection {
             INNER JOIN recipe_collections rc ON r.id = rc.recipe_id
             WHERE rc.collection_id = ?
             ORDER BY rc.added_at DESC
+            LIMIT ?
         ');
-        $stmt->execute([$collectionId]);
+        $stmt->execute([$collectionId, $limit]);
         return $stmt->fetchAll();
     }
 

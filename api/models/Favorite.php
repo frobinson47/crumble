@@ -27,13 +27,13 @@ class Favorite {
         }
     }
 
-    public function getByUser(int $userId): array {
-        $stmt = $this->db->prepare('SELECT recipe_id FROM favorites WHERE user_id = ? ORDER BY created_at DESC');
-        $stmt->execute([$userId]);
+    public function getByUser(int $userId, int $limit = 500): array {
+        $stmt = $this->db->prepare('SELECT recipe_id FROM favorites WHERE user_id = ? ORDER BY created_at DESC LIMIT ?');
+        $stmt->execute([$userId, $limit]);
         return array_column($stmt->fetchAll(), 'recipe_id');
     }
 
-    public function getByUserWithRecipes(int $userId): array {
+    public function getByUserWithRecipes(int $userId, int $limit = 200): array {
         $stmt = $this->db->prepare('
             SELECT r.*,
                 (SELECT ROUND(AVG(score), 1) FROM ratings WHERE recipe_id = r.id) as avg_rating,
@@ -42,8 +42,9 @@ class Favorite {
             JOIN recipes r ON r.id = f.recipe_id
             WHERE f.user_id = ?
             ORDER BY f.created_at DESC
+            LIMIT ?
         ');
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $limit]);
         $recipes = $stmt->fetchAll();
 
         // Attach tags

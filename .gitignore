@@ -4,6 +4,7 @@ uploads/recipes/*
 !uploads/recipes/.gitkeep
 api/.env
 api/vendor/
+api/logs/
 .env
 docs/plans/
 cookies.txt

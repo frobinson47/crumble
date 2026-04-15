@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/LoggerService.php';
+
 /**
  * Edamam Nutrition Analysis API client.
  * Paste a full ingredient list → get accurate total nutrition.
@@ -51,6 +53,7 @@ class EdamamClient
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 15,
+            CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $body,
             CURLOPT_HTTPHEADER => [
@@ -67,14 +70,17 @@ class EdamamClient
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
         if ($httpCode !== 200 || $response === false) {
+            LoggerService::channel('edamam')->error('Edamam API request failed', ['http_code' => $httpCode, 'curl_error' => $curlError, 'title' => $title]);
             return null;
         }
 
         $data = json_decode($response, true);
         if (!$data || empty($data['totalNutrients'])) {
+            LoggerService::channel('edamam')->warning('Edamam returned empty nutrition data', ['title' => $title]);
             return null;
         }
 

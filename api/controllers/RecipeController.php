@@ -3,6 +3,8 @@
 require_once __DIR__ . '/../models/Recipe.php';
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../services/ImageProcessor.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
+require_once __DIR__ . '/../services/LoggerService.php';
 
 class RecipeController {
 
@@ -13,8 +15,8 @@ class RecipeController {
     public function list(): array {
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = max(1, min(100, (int) ($_GET['per_page'] ?? RECIPES_PER_PAGE)));
-        $search = $_GET['search'] ?? null;
-        $tag = $_GET['tag'] ?? null;
+        $search = ValidationHelper::sanitize($_GET['search'] ?? null, 200);
+        $tag = ValidationHelper::sanitize($_GET['tag'] ?? null, 100);
 
         $recipeModel = new Recipe();
         return $recipeModel->getAll($page, $perPage, $search, $tag);
@@ -64,10 +66,26 @@ class RecipeController {
             $data = json_decode(file_get_contents('php://input'), true);
         }
 
-        if (empty($data['title'])) {
-            http_response_code(400);
-            return ['error' => 'Recipe title is required', 'code' => 400];
+        $v = new ValidationHelper();
+        $v->required($data['title'] ?? null, 'title')
+          ->maxLength($data['title'] ?? null, 'title', 500)
+          ->maxLength($data['description'] ?? null, 'description', 5000)
+          ->isArray($data['ingredients'] ?? null, 'ingredients')
+          ->maxCount($data['ingredients'] ?? [], 'ingredients', 200)
+          ->isArray($data['instructions'] ?? null, 'instructions')
+          ->maxCount($data['instructions'] ?? [], 'instructions', 200)
+          ->isArray($data['tags'] ?? null, 'tags')
+          ->maxCount($data['tags'] ?? [], 'tags', 50);
+
+        if ($data['source_url'] ?? null) {
+            $v->url($data['source_url'], 'source_url')->maxLength($data['source_url'], 'source_url', 2000);
         }
+
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
+
+        $data['title'] = ValidationHelper::sanitize($data['title'], 500);
+        $data['description'] = ValidationHelper::sanitize($data['description'] ?? null, 5000);
 
         if (empty($data['instructions'])) {
             $data['instructions'] = [];
@@ -109,6 +127,7 @@ class RecipeController {
             }
         }
 
+        LoggerService::channel('recipe')->info('Recipe created', ['recipe_id' => $recipe['id'], 'user_id' => $userId, 'title' => $recipe['title']]);
         http_response_code(201);
         return $recipe;
     }
@@ -207,6 +226,7 @@ class RecipeController {
         }
 
         $recipeModel->delete($id);
+        LoggerService::channel('recipe')->info('Recipe deleted', ['recipe_id' => $id, 'user_id' => $userId]);
         return ['message' => 'Recipe deleted successfully'];
     }
 
@@ -220,10 +240,12 @@ class RecipeController {
 
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['url'])) {
-            http_response_code(400);
-            return ['error' => 'URL is required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['url'] ?? null, 'url')
+          ->url($input['url'] ?? null, 'url')
+          ->maxLength($input['url'] ?? null, 'url', 2000);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         require_once __DIR__ . '/../services/RecipeScraper.php';
         $scraper = new RecipeScraper();
@@ -366,11 +388,15 @@ class RecipeController {
 
     public function byIngredients(): array {
         Auth::requireAuth();
-        $raw = $_GET['ingredients'] ?? '';
+        $raw = ValidationHelper::sanitize($_GET['ingredients'] ?? '', 2000);
         $ingredients = array_filter(array_map('trim', explode(',', $raw)));
         if (empty($ingredients)) {
             http_response_code(400);
             return ['error' => 'Provide at least one ingredient (comma-separated)'];
+        }
+        if (count($ingredients) > 50) {
+            http_response_code(400);
+            return ['error' => 'Maximum 50 ingredients allowed', 'code' => 400];
         }
         $model = new Recipe();
         return ['recipes' => $model->findByIngredients($ingredients)];

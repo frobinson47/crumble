@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../middleware/Csrf.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
+require_once __DIR__ . '/../services/LoggerService.php';
 
 class AuthController {
 
@@ -12,10 +14,13 @@ class AuthController {
     public function login(): array {
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['username']) || empty($input['password'])) {
-            http_response_code(400);
-            return ['error' => 'Username and password are required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['username'] ?? null, 'username')
+          ->maxLength($input['username'] ?? null, 'username', 100)
+          ->required($input['password'] ?? null, 'password')
+          ->maxLength($input['password'] ?? null, 'password', 500);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         $userModel = new User();
         $user = $userModel->findByUsername($input['username']);
@@ -23,6 +28,7 @@ class AuthController {
         // Check account lockout (skip for demo account)
         $isDemo = $user && $user['is_demo'];
         if ($user && !$isDemo && $userModel->isLocked($user['id'])) {
+            LoggerService::channel('auth')->warning('Login attempt on locked account', ['user_id' => $user['id'], 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             http_response_code(423);
             return ['error' => 'Account is temporarily locked. Try again later.', 'code' => 423];
         }
@@ -31,11 +37,13 @@ class AuthController {
             if ($user && !$isDemo) {
                 $userModel->recordFailedAttempt($user['id']);
             }
+            LoggerService::channel('auth')->warning('Failed login attempt', ['username' => $input['username'], 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
             http_response_code(401);
             return ['error' => 'Invalid username or password', 'code' => 401];
         }
 
         // Successful login — reset failed attempts and regenerate session
+        LoggerService::channel('auth')->info('User logged in', ['user_id' => $user['id'], 'username' => $user['username']]);
         $userModel->resetFailedAttempts($user['id']);
         session_regenerate_id(true);
 

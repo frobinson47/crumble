@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/../models/Pantry.php';
 require_once __DIR__ . '/../middleware/Auth.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
 
 class PantryController {
 
@@ -24,13 +25,14 @@ class PantryController {
         $userId = Auth::requireAuth();
         $input = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($input['ingredient_name'])) {
-            http_response_code(400);
-            return ['error' => 'Ingredient name is required', 'code' => 400];
-        }
+        $v = new ValidationHelper();
+        $v->required($input['ingredient_name'] ?? null, 'ingredient_name')
+          ->maxLength($input['ingredient_name'] ?? null, 'ingredient_name', 255);
+        $response = $v->responseIfFailed();
+        if ($response) return $response;
 
         $pantry = new Pantry();
-        $item = $pantry->add($userId, $input['ingredient_name']);
+        $item = $pantry->add($userId, ValidationHelper::sanitize($input['ingredient_name'], 255));
 
         http_response_code(201);
         return $item;

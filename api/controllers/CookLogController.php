@@ -2,12 +2,13 @@
 
 require_once __DIR__ . '/../middleware/Auth.php';
 require_once __DIR__ . '/../models/CookLog.php';
+require_once __DIR__ . '/../services/ValidationHelper.php';
 
 class CookLogController {
     public function log(int $recipeId): array {
         $userId = Auth::requireAuth();
         $input = json_decode(file_get_contents('php://input'), true);
-        $notes = $input['notes'] ?? null;
+        $notes = ValidationHelper::sanitize($input['notes'] ?? null, 2000);
 
         $model = new CookLog();
         return $model->log($userId, $recipeId, $notes);
