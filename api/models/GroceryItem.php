@@ -81,12 +81,65 @@ class GroceryItem {
 
     /**
      * Add a single item to a grocery list.
+     * Consolidates with an existing item if names match and units are compatible.
      */
     public function create(int $listId, string $name, ?string $amount = null, ?string $unit = null, ?int $recipeId = null): array {
+        // Try to consolidate with existing items
+        $existing = $this->findMatchInList($listId, $name);
+        if ($existing) {
+            $existingVal = UnitConverter::parseAmount($existing['amount']);
+            $newVal = UnitConverter::parseAmount($amount);
+
+            if ($existingVal !== null && $newVal !== null) {
+                if (($existing['unit'] ?? '') === ($unit ?? '')) {
+                    // Same unit — just add amounts
+                    $newAmount = UnitConverter::formatAmount($existingVal + $newVal);
+                    return $this->update($existing['id'], ['amount' => $newAmount]);
+                } elseif ($existing['unit'] && $unit && UnitConverter::canConvert($existing['unit'], $unit)) {
+                    // Compatible units — convert and add
+                    $convertedVal = UnitConverter::convert($newVal, $unit, $existing['unit']);
+                    if ($convertedVal !== null) {
+                        $total = $existingVal + $convertedVal;
+                        $measureType = UnitConverter::getMeasureType($existing['unit']);
+                        $baseAmount = UnitConverter::convert($total, $existing['unit'], $measureType === 'volume' ? 'tsp' : 'g');
+                        $best = UnitConverter::bestUnit($baseAmount, $existing['unit'], $measureType);
+                        $newAmount = UnitConverter::formatAmount($best['amount']);
+                        return $this->update($existing['id'], ['amount' => $newAmount, 'unit' => $best['unit']]);
+                    }
+                }
+            }
+        }
+
         $stmt = $this->db->prepare('INSERT INTO grocery_items (list_id, name, amount, unit, recipe_id) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([$listId, $name, $amount, $unit, $recipeId]);
         $id = (int) $this->db->lastInsertId();
         return $this->findById($id);
+    }
+
+    /**
+     * Find an existing item in a list that matches by exact or normalized name.
+     */
+    private function findMatchInList(int $listId, string $name): ?array {
+        $stmt = $this->db->prepare('SELECT id, name, amount, unit FROM grocery_items WHERE list_id = ? AND checked = 0');
+        $stmt->execute([$listId]);
+        $items = $stmt->fetchAll();
+
+        $exactKey = strtolower(trim($name));
+        $normalizedKey = self::normalizeForMatch($name);
+
+        foreach ($items as $item) {
+            if (strtolower(trim($item['name'])) === $exactKey) {
+                return $item;
+            }
+        }
+        if ($normalizedKey !== '') {
+            foreach ($items as $item) {
+                if (self::normalizeForMatch($item['name']) === $normalizedKey) {
+                    return $item;
+                }
+            }
+        }
+        return null;
     }
 
     /**
