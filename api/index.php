@@ -941,7 +941,7 @@ try {
                 }
             } elseif ($id === 'usda-search' && $method === 'GET') {
                 // GET /ingredient-data/usda-search?q=chicken
-                Auth::requireAdmin();
+                Auth::requireAuth();
                 $query = $_GET['q'] ?? '';
                 if (empty($query)) {
                     http_response_code(400);
