@@ -9,22 +9,22 @@ const MODES = [
 
 export default function DensityToggle({ value, onChange }) {
   return (
-    <div className="flex bg-surface-sunken rounded-xl p-0.5 gap-0.5">
+    <div className="flex border border-cream-dark rounded-xl p-1 gap-1 bg-surface">
       {MODES.map(({ value: v, icon: Icon, label }) => (
         <button
           key={v}
           onClick={() => onChange(v)}
           className={`
-            w-9 h-8 rounded-lg flex items-center justify-center transition-all duration-150
+            w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150
             ${value === v
-              ? 'bg-surface shadow-sm text-terracotta'
-              : 'text-warm-gray hover:text-brown'
+              ? 'bg-terracotta/10 text-terracotta shadow-sm'
+              : 'text-warm-gray hover:text-brown hover:bg-cream-dark'
             }
           `}
           aria-label={label}
           title={label}
         >
-          <Icon size={16} />
+          <Icon size={18} />
         </button>
       ))}
     </div>
