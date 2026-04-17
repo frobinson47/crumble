@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChefHat, Check } from 'lucide-react';
 import * as api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 
@@ -12,6 +13,8 @@ export default function CookButton({ recipeId, cookCount = 0, onCook }) {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [notes, setNotes] = useState('');
+
+  const toast = useToast();
 
   if (!user) return null;
 
@@ -24,10 +27,11 @@ export default function CookButton({ recipeId, cookCount = 0, onCook }) {
       setJustCooked(true);
       setShowModal(false);
       setNotes('');
+      toast.success(withNotes ? 'Cook logged with note' : 'Cook logged!');
       setTimeout(() => setJustCooked(false), 2000);
       if (onCook) onCook();
     } catch {
-      // ignore
+      toast.error('Failed to log cook');
     } finally {
       setLoading(false);
     }

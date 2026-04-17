@@ -1,42 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Plus, ShoppingCart, User, Shield, LogOut, Upload, BookOpen, Heart, CalendarDays, TrendingUp, Sun, Moon, Monitor, Download, FileText, ChevronDown, Settings, Database, Compass, Library } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, Heart, CalendarDays, Search, Settings, Sun, Moon, Monitor, LogOut, Plus, Upload, BookOpen, TrendingUp, Shield, Database, Compass, Library, ChevronRight, Download, FileText, User } from 'lucide-react';
 import CookslateLogo from '../ui/CookslateLogo';
 import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { useLicense } from '../../hooks/useLicense';
 
-function ExportMenu() {
-  const [open, setOpen] = React.useState(false);
+function NavIcon({ to, icon: Icon, label, end = false }) {
   return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"
-      >
-        <Download size={20} />
-        <span className="flex-1">Export Recipes</span>
-        <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="ml-8 space-y-1">
-          <a
-            href="/api/recipes/export-zip"
-            className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200"
-          >
-            <Download size={16} />
-            <span>ZIP (Full Backup)</span>
-          </a>
-          <a
-            href="/api/recipes/export-cooklang"
-            className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200"
-          >
-            <FileText size={16} />
-            <span>Cooklang (.cook)</span>
-          </a>
-        </div>
-      )}
-    </div>
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `
+        relative group flex items-center justify-center w-11 h-11 rounded-xl
+        transition-colors duration-150
+        ${isActive
+          ? 'bg-terracotta/10 text-terracotta'
+          : 'text-warm-gray hover:bg-cream-dark hover:text-brown'
+        }
+      `}
+      aria-label={label}
+    >
+      <Icon size={20} />
+      <span className="absolute left-14 bg-brown text-white text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-warm">
+        {label}
+      </span>
+    </NavLink>
   );
 }
 
@@ -44,99 +33,162 @@ export default function Sidebar() {
   const { user, isAdmin, logout } = useAuth();
   const { theme, cycle } = useTheme();
   const { active: proActive } = useLicense();
+  const [expanded, setExpanded] = useState(false);
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
-  const themeLabel = theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System';
 
-  const navItems = [
-    { to: '/', icon: LayoutGrid, label: 'Recipes' },
+  const handleLogout = async () => {
+    try { await logout(); } catch { /* ignore */ }
+  };
+
+  // Tier 2+ items for expanded view
+  const tier2Items = [
     { to: '/add', icon: Plus, label: 'Add Recipe' },
     { to: '/bulk-import', icon: Upload, label: 'Bulk Import' },
-    { to: '/favorites', icon: Heart, label: 'Favorites' },
-    ...(proActive ? [{ to: '/meal-plan', icon: CalendarDays, label: 'Meal Plan' }] : []),
-    { to: '/grocery', icon: ShoppingCart, label: 'Grocery Lists' },
     { to: '/collections', icon: Library, label: 'Collections' },
     { to: '/discover', icon: Compass, label: 'Discover' },
     { to: '/cook-history', icon: BookOpen, label: 'Cook History' },
     ...(proActive ? [{ to: '/stats', icon: TrendingUp, label: 'Kitchen Stats' }] : []),
+    ...(isAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
+    { to: '/ingredient-database', icon: Database, label: 'Ingredients' },
   ];
 
-  if (isAdmin) {
-    navItems.push({ to: '/admin', icon: Shield, label: 'Admin' });
-  }
-  navItems.push({ to: '/ingredient-database', icon: Database, label: 'Ingredients' });
-
-  navItems.push({ to: '/settings', icon: Settings, label: 'Settings' });
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-      // Ignore errors on logout
-    }
-  };
-
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-surface border-r border-cream-dark h-screen sticky top-0">
+    <aside
+      className={`hidden md:flex flex-col bg-surface border-r border-cream-dark h-screen sticky top-0 transition-all duration-200 overflow-hidden ${expanded ? 'w-60' : 'w-16'}`}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-cream-dark">
-        <div className="flex items-center gap-2">
-          <CookslateLogo size={32} className="text-terracotta" />
-          <span className="text-2xl font-bold text-brown font-display">
+      <div className={`flex items-center gap-2.5 h-16 shrink-0 border-b border-cream-dark ${expanded ? 'px-4' : 'justify-center'}`}>
+        <CookslateLogo size={28} className="text-terracotta shrink-0" />
+        {expanded && (
+          <span className="text-lg font-bold text-brown font-display whitespace-nowrap">
             Cookslate
           </span>
-        </div>
+        )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-xl
-              min-h-[44px]
-              font-medium transition-colors duration-200
-              ${isActive
-                ? 'bg-terracotta/10 text-terracotta'
-                : 'text-brown-light hover:bg-cream-dark hover:text-brown'
-              }
-            `}
+      {/* Tier 1 Navigation */}
+      <nav className={`flex-1 flex flex-col gap-1 py-3 ${expanded ? 'px-3' : 'items-center px-0'}`}>
+        {/* Tier 1 items — always visible */}
+        {expanded ? (
+          <>
+            <ExpandedLink to="/" icon={LayoutGrid} label="Recipes" end />
+            <ExpandedLink to="/favorites" icon={Heart} label="Favorites" />
+            {proActive && <ExpandedLink to="/meal-plan" icon={CalendarDays} label="Meal Plan" />}
+            <ExpandedLink to="/grocery" icon={ShoppingCart} label="Grocery Lists" />
+
+            {/* Divider */}
+            <div className="h-px bg-cream-dark my-2" />
+
+            {/* Tier 2 */}
+            {tier2Items.map(item => (
+              <ExpandedLink key={item.to} to={item.to} icon={item.icon} label={item.label} />
+            ))}
+          </>
+        ) : (
+          <>
+            <NavIcon to="/" icon={LayoutGrid} label="Recipes" end />
+            <NavIcon to="/favorites" icon={Heart} label="Favorites" />
+            {proActive && <NavIcon to="/meal-plan" icon={CalendarDays} label="Meal Plan" />}
+            <NavIcon to="/grocery" icon={ShoppingCart} label="Grocery Lists" />
+
+            {/* More indicator */}
+            <button
+              className="flex items-center justify-center w-11 h-11 rounded-xl text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 relative group"
+              onClick={() => setExpanded(true)}
+              aria-label="More navigation"
+            >
+              <ChevronRight size={18} />
+              <span className="absolute left-14 bg-brown text-white text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-warm">
+                More
+              </span>
+            </button>
+          </>
+        )}
+
+        {/* Search (opens Cmd+K) */}
+        {expanded ? (
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 text-sm font-medium"
           >
-            <Icon size={20} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
+            <Search size={18} />
+            <span>Search</span>
+            <kbd className="ml-auto text-[10px] font-semibold text-warm-gray/60 bg-cream-dark px-1.5 py-0.5 rounded">⌘K</kbd>
+          </button>
+        ) : (
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            className="relative group flex items-center justify-center w-11 h-11 rounded-xl text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150"
+            aria-label="Search (Ctrl+K)"
+          >
+            <Search size={20} />
+            <span className="absolute left-14 bg-brown text-white text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-warm">
+              Search ⌘K
+            </span>
+          </button>
+        )}
 
-      {/* User section */}
-      <div className="p-4 border-t border-cream-dark">
-        <div className="flex items-center gap-3 px-4 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-sage-light flex items-center justify-center">
-            <User size={16} className="text-sage-dark" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-brown">{user?.username}</p>
-            <p className="text-xs text-warm-gray capitalize">{user?.role}</p>
-          </div>
-        </div>
-        <button
-          onClick={cycle}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"
-        >
-          <ThemeIcon size={20} />
-          <span>{themeLabel} Mode</span>
-        </button>
-        <ExportMenu />
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-brown-light hover:bg-cream-dark hover:text-brown transition-colors duration-200 min-h-[44px] font-medium"
-        >
-          <LogOut size={20} />
-          <span>Log Out</span>
-        </button>
-      </div>
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Settings + Theme + Logout (bottom) */}
+        {expanded ? (
+          <>
+            <div className="h-px bg-cream-dark my-2" />
+            <button
+              onClick={cycle}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 text-sm font-medium"
+            >
+              <ThemeIcon size={18} />
+              <span>{theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System'}</span>
+            </button>
+            <ExpandedLink to="/settings" icon={Settings} label="Settings" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 text-sm font-medium"
+            >
+              <LogOut size={18} />
+              <span>Log Out</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <NavIcon to="/settings" icon={Settings} label="Settings" />
+            <button
+              onClick={cycle}
+              className="relative group flex items-center justify-center w-11 h-11 rounded-xl text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150"
+              aria-label="Toggle theme"
+            >
+              <ThemeIcon size={18} />
+              <span className="absolute left-14 bg-brown text-white text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-warm">
+                Theme
+              </span>
+            </button>
+          </>
+        )}
+      </nav>
     </aside>
+  );
+}
+
+function ExpandedLink({ to, icon: Icon, label, end = false }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `
+        flex items-center gap-3 px-3 py-2.5 rounded-xl
+        text-sm font-medium transition-colors duration-150 whitespace-nowrap
+        ${isActive
+          ? 'bg-terracotta/10 text-terracotta'
+          : 'text-warm-gray hover:bg-cream-dark hover:text-brown'
+        }
+      `}
+    >
+      <Icon size={18} />
+      <span>{label}</span>
+    </NavLink>
   );
 }

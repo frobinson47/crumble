@@ -4,6 +4,7 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import { Plus, Search, Clock, ArrowRight, UtensilsCrossed, X, ChefHat, CalendarDays, RotateCcw, Sparkles, Link2, FileUp, ClipboardPaste } from 'lucide-react';
 import RecipeGrid from '../components/recipe/RecipeGrid';
+import DensityToggle from '../components/ui/DensityToggle';
 import useRecipes from '../hooks/useRecipes';
 import useRecentlyViewed from '../hooks/useRecentlyViewed';
 import { useAuth } from '../hooks/useAuth';
@@ -29,6 +30,12 @@ export default function HomePage({ searchQuery = '' }) {
   const [forgottenFavorites, setForgottenFavorites] = useState([]);
   const [uncookedRecipes, setUncookedRecipes] = useState([]);
   const [deleteTagConfirm, setDeleteTagConfirm] = useState(null);
+  const [density, setDensity] = useState(() => localStorage.getItem('recipeDensity') || 'grid');
+
+  const handleDensityChange = (v) => {
+    setDensity(v);
+    localStorage.setItem('recipeDensity', v);
+  };
 
   // Fetch today's meal plan, forgotten favorites, and uncooked recipes
   useEffect(() => {
@@ -349,9 +356,10 @@ export default function HomePage({ searchQuery = '' }) {
         )}
       </div>
 
-      {/* Quick filter chips */}
+      {/* Quick filter chips + density toggle */}
       {tags.length > 0 && (
-        <div className="overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 overflow-x-auto scrollbar-hide pb-1">
           <div className="flex gap-2 min-w-min">
             <button
               onClick={() => setActiveTag('')}
@@ -377,6 +385,17 @@ export default function HomePage({ searchQuery = '' }) {
               </button>
             ))}
           </div>
+          </div>
+          <div className="hidden md:block shrink-0">
+            <DensityToggle value={density} onChange={handleDensityChange} />
+          </div>
+        </div>
+      )}
+
+      {/* Density toggle standalone (when no tags) */}
+      {tags.length === 0 && (
+        <div className="hidden md:flex justify-end">
+          <DensityToggle value={density} onChange={handleDensityChange} />
         </div>
       )}
 
@@ -630,6 +649,7 @@ export default function HomePage({ searchQuery = '' }) {
           isLoading={isLoading}
           hasMore={pagination.page < pagination.totalPages}
           onLoadMore={handleLoadMore}
+          density={density}
         />
       )}
 

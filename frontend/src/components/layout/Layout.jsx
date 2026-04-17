@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
+import CommandPalette from '../ui/CommandPalette';
 
 export default function Layout({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,6 +80,9 @@ export default function Layout({ children }) {
         {/* Mobile Bottom Nav */}
         <BottomNav />
       </div>
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette />
     </div>
   );
 }

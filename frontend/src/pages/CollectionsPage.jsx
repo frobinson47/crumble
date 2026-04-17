@@ -7,6 +7,7 @@ import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import { Skeleton } from '../components/ui/Skeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import EmptyState from '../components/ui/EmptyState';
 import { thumbImageUrl } from '../utils/imageUrl';
 
 export default function CollectionsPage() {
@@ -95,13 +96,14 @@ export default function CollectionsPage() {
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="aspect-[4/3] rounded-2xl" />)}
           </div>
         ) : recipes.length === 0 ? (
-          <div className="text-center py-16 bg-surface rounded-2xl shadow-md">
-            <UtensilsCrossed size={48} className="mx-auto text-warm-gray/40 mb-3" />
-            <p className="text-lg text-warm-gray">No recipes in this collection</p>
-            <p className="text-sm text-warm-gray mt-1">
-              Open a recipe and use &quot;Add to Collection&quot; to add recipes here.
-            </p>
-          </div>
+          <EmptyState
+            icon={UtensilsCrossed}
+            accent="cream"
+            title="No recipes in this collection"
+            description="Open a recipe and use &quot;Add to Collection&quot; to add recipes here."
+            actionLabel="Browse Recipes"
+            actionTo="/"
+          />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {recipes.map(recipe => (

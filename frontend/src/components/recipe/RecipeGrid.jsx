@@ -1,9 +1,12 @@
 import React from 'react';
 import RecipeCard from './RecipeCard';
+import RecipeListItem from './RecipeListItem';
+import RecipeCompactItem from './RecipeCompactItem';
 import { RecipeCardSkeleton } from '../ui/Skeleton';
 import { BookOpen } from 'lucide-react';
+import EmptyState from '../ui/EmptyState';
 
-export default function RecipeGrid({ recipes, isLoading, hasMore, onLoadMore }) {
+export default function RecipeGrid({ recipes, isLoading, hasMore, onLoadMore, density = 'grid' }) {
   if (isLoading && recipes.length === 0) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -16,10 +19,51 @@ export default function RecipeGrid({ recipes, isLoading, hasMore, onLoadMore }) 
 
   if (!isLoading && recipes.length === 0) {
     return (
-      <div className="text-center py-12">
-        <BookOpen size={48} className="text-warm-gray mx-auto mb-4" />
-        <p className="text-lg text-warm-gray">No recipes found</p>
-        <p className="text-sm text-warm-gray mt-1">Try a different search or add a new recipe</p>
+      <EmptyState
+        icon={BookOpen}
+        accent="cream"
+        title="No recipes found"
+        description="Try a different search or add a new recipe."
+        actionLabel="Add Recipe"
+        actionTo="/add"
+      />
+    );
+  }
+
+  const loadMoreBtn = hasMore && (
+    <div className="flex justify-center mt-8 mb-4">
+      <button
+        onClick={onLoadMore}
+        disabled={isLoading}
+        className="px-8 py-4 bg-terracotta text-white font-bold rounded-xl hover:bg-terracotta-dark transition-colors duration-200 min-h-[48px] disabled:opacity-50 text-base"
+      >
+        {isLoading ? 'Loading...' : 'Load More Recipes'}
+      </button>
+    </div>
+  );
+
+  if (density === 'list') {
+    return (
+      <div>
+        <div className="flex flex-col gap-2">
+          {recipes.map((recipe) => (
+            <RecipeListItem key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+        {loadMoreBtn}
+      </div>
+    );
+  }
+
+  if (density === 'compact') {
+    return (
+      <div>
+        <div className="flex flex-col gap-px bg-cream-dark rounded-xl overflow-hidden">
+          {recipes.map((recipe) => (
+            <RecipeCompactItem key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+        {loadMoreBtn}
       </div>
     );
   }
@@ -31,19 +75,7 @@ export default function RecipeGrid({ recipes, isLoading, hasMore, onLoadMore }) 
           <RecipeCard key={recipe.id} recipe={recipe} />
         ))}
       </div>
-
-      {/* Load more */}
-      {hasMore && (
-        <div className="flex justify-center mt-8 mb-4">
-          <button
-            onClick={onLoadMore}
-            disabled={isLoading}
-            className="px-8 py-4 bg-terracotta text-white font-bold rounded-xl hover:bg-terracotta-dark transition-colors duration-200 min-h-[48px] disabled:opacity-50 text-base"
-          >
-            {isLoading ? 'Loading...' : 'Load More Recipes'}
-          </button>
-        </div>
-      )}
+      {loadMoreBtn}
     </div>
   );
 }

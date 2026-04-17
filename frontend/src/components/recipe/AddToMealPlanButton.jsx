@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarPlus, Check, ChevronLeft, Sunrise, Sun, Moon, Cookie } from 'lucide-react';
 import { useLicense } from '../../hooks/useLicense';
+import { useToast } from '../../hooks/useToast';
 import * as api from '../../services/api';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -33,6 +34,8 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
   const [adding, setAdding] = useState(false);
   const [success, setSuccess] = useState(null);
 
+  const toast = useToast();
+
   if (!proActive) return null;
 
   const weekStart = getMonday(new Date());
@@ -54,9 +57,10 @@ export default function AddToMealPlanButton({ recipeId, variant = 'overlay', cla
       const dayDate = getDayDate(weekStart, selectedDay);
       const meal = MEAL_TYPES.find(m => m.value === mealType);
       setSuccess(`${DAY_NAMES[selectedDay]} ${dayDate.getDate()} ${meal ? meal.label : ''}`);
+      toast.success(`Added to ${DAY_NAMES_FULL[selectedDay]} ${meal ? meal.label.toLowerCase() : ''}`);
       setTimeout(() => { setSuccess(null); setOpen(false); setSelectedDay(null); }, 1200);
     } catch {
-      // handled by api layer
+      toast.error('Failed to add to meal plan');
     } finally {
       setAdding(false);
     }

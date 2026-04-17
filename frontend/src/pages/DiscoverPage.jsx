@@ -5,6 +5,7 @@ import Modal from '../components/ui/Modal';
 import * as api from '../services/api';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useNavigate } from 'react-router-dom';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function DiscoverPage() {
   useDocumentTitle('Discover Recipes');
@@ -133,10 +134,12 @@ export default function DiscoverPage() {
           <Loader2 className="animate-spin text-terracotta" size={32} />
         </div>
       ) : meals.length === 0 ? (
-        <div className="text-center py-12">
-          <ChefHat size={48} className="text-warm-gray mx-auto mb-4" />
-          <p className="text-warm-gray">No recipes found. Try a different search.</p>
-        </div>
+        <EmptyState
+          icon={Compass}
+          accent="cream"
+          title="No recipes found"
+          description="Try a different search term or browse by category."
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {meals.map(meal => (

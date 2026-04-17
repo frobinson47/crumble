@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cream: #FFF8F0;
-  --color-cream-dark: #F5EDE3;
-  --color-terracotta: #C1694F;
-  --color-terracotta-light: #D4896F;
-  --color-terracotta-dark: #A8533A;
-  --color-brown: #3E2723;
-  --color-brown-light: #5D4037;
-  --color-sage: #7D9B76;
-  --color-sage-light: #A8C5A0;
-  --color-sage-dark: #5F7A58;
-  --color-warm-gray: #6E5D52;
+  /* ==========================================================================
+     PRIMITIVE COLOR SCALES
+     Expanded from flat palette to full scales (Loop 1 design tokens)
+     ========================================================================== */
+
+  /* Cream scale */
+  --color-cream-50: #FFFCF8;
+  --color-cream: #FFF8F0;         /* cream-100, backward compat */
+  --color-cream-dark: #F5EDE3;    /* cream-200, backward compat */
+  --color-cream-300: #E8DDD1;
+  --color-cream-400: #D4C4B5;
+  --color-cream-500: #B8A494;
+
+  /* Terracotta scale */
+  --color-terracotta-50: #FEF3EE;
+  --color-terracotta-100: #FDDECF;
+  --color-terracotta-200: #F5B89A;
+  --color-terracotta-light: #D4896F;  /* backward compat */
+  --color-terracotta: #C1694F;        /* terracotta-500, backward compat */
+  --color-terracotta-dark: #A8533A;   /* backward compat */
+  --color-terracotta-700: #8B3F2A;
+
+  /* Sage scale */
+  --color-sage-50: #F2F7F1;
+  --color-sage-100: #E0EDDE;
+  --color-sage-light: #A8C5A0;   /* backward compat */
+  --color-sage: #7D9B76;         /* sage-500, backward compat */
+  --color-sage-dark: #5F7A58;    /* backward compat */
+
+  /* Brown scale (text colors) */
+  --color-brown: #3E2723;        /* cream-900 equivalent, backward compat */
+  --color-brown-light: #5D4037;  /* backward compat */
+
+  /* Warm gray (muted text) */
+  --color-warm-gray: #6E5D52;    /* backward compat — maps to cream-700 */
+
+  /* Surfaces */
   --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #F5EDE3;
+
+  /* Borders (semantic) */
+  --color-border: #E8DDD1;
+  --color-border-subtle: #F5EDE3;
+  --color-border-strong: #D4C4B5;
+
+  /* Feedback colors */
+  --color-success: #5F7A58;
+  --color-success-soft: #F2F7F1;
+  --color-warning: #D97706;
+  --color-warning-soft: #FFFBEB;
+  --color-error: #DC2626;
+  --color-error-soft: #FEF2F2;
+
+  /* ==========================================================================
+     TYPOGRAPHY
+     ========================================================================== */
   --font-family-display: 'Nunito', sans-serif;
   --font-family-body: 'Nunito', sans-serif;
   --font-family-serif: 'Playfair Display', Georgia, serif;
+
+  /* ==========================================================================
+     SHADOWS (warm-tinted — brown alpha, not black)
+     ========================================================================== */
+  --shadow-sm: 0 1px 2px rgba(62, 39, 35, 0.06);
+  --shadow-warm: 0 2px 8px rgba(62, 39, 35, 0.08), 0 1px 2px rgba(62, 39, 35, 0.04);
+  --shadow-warm-lg: 0 4px 16px rgba(62, 39, 35, 0.10), 0 2px 4px rgba(62, 39, 35, 0.06);
+  --shadow-warm-xl: 0 8px 32px rgba(62, 39, 35, 0.12), 0 4px 8px rgba(62, 39, 35, 0.08);
+
+  /* ==========================================================================
+     MOTION
+     ========================================================================== */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-emphasize: cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Base styles */
-
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
 body {
   font-family: 'Nunito', sans-serif;
   background-color: #FFF8F0;
@@ -29,22 +88,48 @@ body {
   padding: 0;
 }
 
-/* Dark mode overrides */
+/* ==========================================================================
+   DARK MODE — prefers-color-scheme
+   ========================================================================== */
 @media (prefers-color-scheme: dark) {
   :root {
+    --color-cream-50: #151210;
     --color-cream: #1A1412;
     --color-cream-dark: #231C17;
+    --color-cream-300: #2A221D;
+    --color-cream-400: #44403C;
+    --color-cream-500: #57534E;
     --color-surface: #2A221D;
     --color-surface-raised: #342B25;
+    --color-surface-sunken: #151210;
     --color-brown: #F5EDE3;
     --color-brown-light: #D4C4B5;
     --color-warm-gray: #A89888;
+    --color-terracotta-50: rgba(193, 105, 79, 0.15);
+    --color-terracotta-100: rgba(193, 105, 79, 0.25);
+    --color-terracotta-200: #E0A08A;
     --color-terracotta: #D4896F;
     --color-terracotta-light: #E0A08A;
     --color-terracotta-dark: #C1694F;
+    --color-terracotta-700: #E0A08A;
+    --color-sage-50: rgba(125, 155, 118, 0.15);
+    --color-sage-100: rgba(125, 155, 118, 0.25);
     --color-sage: #A8C5A0;
     --color-sage-light: #7D9B76;
     --color-sage-dark: #C5DFC0;
+    --color-border: #44403C;
+    --color-border-subtle: #292524;
+    --color-border-strong: #57534E;
+    --color-success: #8DAE85;
+    --color-success-soft: rgba(125, 155, 118, 0.15);
+    --color-error: #F87171;
+    --color-error-soft: rgba(220, 38, 38, 0.15);
+    --color-warning: #FBBF24;
+    --color-warning-soft: rgba(217, 119, 6, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-warm: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+    --shadow-warm-lg: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-warm-xl: 0 8px 32px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.25);
   }
 
   body {
@@ -52,29 +137,51 @@ body {
     color: #F5EDE3;
   }
 
-  ::-webkit-scrollbar-track {
-    background: #231C17;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #5D4037;
-  }
+  ::-webkit-scrollbar-track { background: #231C17; }
+  ::-webkit-scrollbar-thumb { background: #5D4037; }
 }
 
-/* Manual dark mode toggle */
+/* ==========================================================================
+   DARK MODE — manual toggle
+   ========================================================================== */
 [data-theme="dark"] {
+  --color-cream-50: #151210;
   --color-cream: #1A1412;
   --color-cream-dark: #231C17;
+  --color-cream-300: #2A221D;
+  --color-cream-400: #44403C;
+  --color-cream-500: #57534E;
   --color-surface: #2A221D;
   --color-surface-raised: #342B25;
+  --color-surface-sunken: #151210;
   --color-brown: #F5EDE3;
   --color-brown-light: #D4C4B5;
   --color-warm-gray: #A89888;
+  --color-terracotta-50: rgba(193, 105, 79, 0.15);
+  --color-terracotta-100: rgba(193, 105, 79, 0.25);
+  --color-terracotta-200: #E0A08A;
   --color-terracotta: #D4896F;
   --color-terracotta-light: #E0A08A;
   --color-terracotta-dark: #C1694F;
+  --color-terracotta-700: #E0A08A;
+  --color-sage-50: rgba(125, 155, 118, 0.15);
+  --color-sage-100: rgba(125, 155, 118, 0.25);
   --color-sage: #A8C5A0;
   --color-sage-light: #7D9B76;
   --color-sage-dark: #C5DFC0;
+  --color-border: #44403C;
+  --color-border-subtle: #292524;
+  --color-border-strong: #57534E;
+  --color-success: #8DAE85;
+  --color-success-soft: rgba(125, 155, 118, 0.15);
+  --color-error: #F87171;
+  --color-error-soft: rgba(220, 38, 38, 0.15);
+  --color-warning: #FBBF24;
+  --color-warning-soft: rgba(217, 119, 6, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-warm: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-warm-lg: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-warm-xl: 0 8px 32px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.25);
   background-color: #1A1412;
   color: #F5EDE3;
 }
@@ -88,55 +195,90 @@ body {
 }
 [data-theme="dark"] .bg-red-50 { background-color: rgba(127, 29, 29, 0.15) !important; }
 
-/* Force light mode when system prefers dark but user chose light */
+/* ==========================================================================
+   LIGHT MODE — force when system prefers dark
+   ========================================================================== */
 [data-theme="light"] {
+  --color-cream-50: #FFFCF8;
   --color-cream: #FFF8F0;
   --color-cream-dark: #F5EDE3;
+  --color-cream-300: #E8DDD1;
+  --color-cream-400: #D4C4B5;
+  --color-cream-500: #B8A494;
   --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #F5EDE3;
   --color-brown: #3E2723;
   --color-brown-light: #5D4037;
   --color-warm-gray: #8D7B6E;
+  --color-terracotta-50: #FEF3EE;
+  --color-terracotta-100: #FDDECF;
+  --color-terracotta-200: #F5B89A;
   --color-terracotta: #C1694F;
   --color-terracotta-light: #D4896F;
   --color-terracotta-dark: #A8533A;
+  --color-terracotta-700: #8B3F2A;
+  --color-sage-50: #F2F7F1;
+  --color-sage-100: #E0EDDE;
   --color-sage: #7D9B76;
   --color-sage-light: #A8C5A0;
   --color-sage-dark: #5F7A58;
+  --color-border: #E8DDD1;
+  --color-border-subtle: #F5EDE3;
+  --color-border-strong: #D4C4B5;
+  --color-success: #5F7A58;
+  --color-success-soft: #F2F7F1;
+  --color-error: #DC2626;
+  --color-error-soft: #FEF2F2;
+  --color-warning: #D97706;
+  --color-warning-soft: #FFFBEB;
+  --shadow-sm: 0 1px 2px rgba(62, 39, 35, 0.06);
+  --shadow-warm: 0 2px 8px rgba(62, 39, 35, 0.08), 0 1px 2px rgba(62, 39, 35, 0.04);
+  --shadow-warm-lg: 0 4px 16px rgba(62, 39, 35, 0.10), 0 2px 4px rgba(62, 39, 35, 0.06);
+  --shadow-warm-xl: 0 8px 32px rgba(62, 39, 35, 0.12), 0 4px 8px rgba(62, 39, 35, 0.08);
   background-color: #FFF8F0;
   color: #3E2723;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #F5EDE3;
-}
-::-webkit-scrollbar-thumb {
-  background: #8D7B6E;
-  border-radius: 3px;
-}
+/* ==========================================================================
+   SCROLLBAR
+   ========================================================================== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F5EDE3; }
+::-webkit-scrollbar-thumb { background: #8D7B6E; border-radius: 3px; }
 
-/* Auto-expanding textarea */
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
 .auto-expand {
   field-sizing: content;
   min-height: 2.5rem;
 }
 
-/* Hide scrollbar for horizontal scroll areas */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
-/* Strikethrough animation for grocery items */
 .checked-item {
   text-decoration: line-through;
   opacity: 0.5;
   transition: all 0.3s ease;
+}
+
+/* ==========================================================================
+   TOAST ANIMATIONS (Loop 5)
+   ========================================================================== */
+@keyframes cmdpal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.95); }
 }

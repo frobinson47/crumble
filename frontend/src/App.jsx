@@ -6,6 +6,7 @@ migrateLocalStorage();
 import { AuthProvider } from './hooks/useAuth';
 import { LicenseProvider, useLicense } from './hooks/useLicense';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { ToastProvider } from './hooks/useToast';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
@@ -39,6 +40,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <LicenseProvider>
+        <ToastProvider>
         <ErrorBoundary>
         <Routes>
           {/* Public routes */}
@@ -202,6 +204,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </ErrorBoundary>
+        </ToastProvider>
         </LicenseProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import * as api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 
 export default function FavoriteButton({ recipeId, initialFavorited = false, size = 'md', overlay = false }) {
   const { user } = useAuth();
+  const toast = useToast();
   const [favorited, setFavorited] = useState(initialFavorited);
   const [loading, setLoading] = useState(false);
 
@@ -15,12 +17,14 @@ export default function FavoriteButton({ recipeId, initialFavorited = false, siz
     e.stopPropagation();
     if (loading) return;
     setLoading(true);
+    const prev = favorited;
     setFavorited(!favorited);
     try {
       const result = await api.toggleFavorite(recipeId);
       setFavorited(result.favorited);
     } catch {
-      setFavorited(favorited);
+      setFavorited(prev);
+      toast.error('Failed to update favorite');
     } finally {
       setLoading(false);
     }

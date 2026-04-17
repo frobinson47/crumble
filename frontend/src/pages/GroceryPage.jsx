@@ -12,6 +12,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 import { groupByCategory } from '../utils/ingredientCategories';
 import PantrySection from '../components/grocery/PantrySection';
 import usePantry from '../hooks/usePantry';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function GroceryPage() {
   const {
@@ -287,13 +288,14 @@ export default function GroceryPage() {
       {isLoading && lists.length === 0 ? (
         <GroceryListSkeleton />
       ) : lists.length === 0 ? (
-        <div className="text-center py-12 bg-surface rounded-2xl shadow-md">
-          <ShoppingCart size={48} className="mx-auto text-warm-gray mb-3" />
-          <p className="text-lg text-warm-gray">No grocery lists yet</p>
-          <p className="text-sm text-warm-gray mt-1">
-            Create one or add ingredients from a recipe
-          </p>
-        </div>
+        <EmptyState
+          icon={ShoppingCart}
+          accent="sage"
+          title="No grocery lists yet"
+          description="Create a list or add ingredients directly from any recipe."
+          actionLabel="New List"
+          onAction={() => setShowNewListModal(true)}
+        />
       ) : (
         <div className="space-y-3">
           {lists.map(list => (

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Clock, Edit, Trash2, ExternalLink, ChefHat, ShoppingCart,
-  ArrowLeft, Plus, Printer, Link2, QrCode
+  ArrowLeft, Plus, Printer, Link2, QrCode, Heart, Share2, UtensilsCrossed, ListChecks
 } from 'lucide-react';
 import qrcode from 'qrcode-generator';
 import useRecipes from '../hooks/useRecipes';
@@ -29,6 +29,7 @@ import RelatedRecipes from '../components/recipe/RelatedRecipes';
 import NutritionFacts from '../components/recipe/NutritionFacts';
 import RecipeInsights from '../components/recipe/RecipeInsights';
 import useRecentlyViewed from '../hooks/useRecentlyViewed';
+import { useToast } from '../hooks/useToast';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { estimateDifficulty, DIFFICULTY_COLORS } from '../utils/recipeDifficulty';
 import { timeAgo } from '../utils/timeAgo';
@@ -41,6 +42,7 @@ export default function RecipePage() {
   const { recipe, isLoading, error, fetchRecipe, removeRecipe } = useRecipes();
   const { lists, fetchLists, createList, addRecipeToList } = useGrocery();
   const { addRecipe: addToRecentlyViewed } = useRecentlyViewed();
+  const toast = useToast();
 
   const [cookMode, setCookMode] = useState(false);
   const [showGroceryModal, setShowGroceryModal] = useState(false);
@@ -103,9 +105,10 @@ export default function RecipePage() {
   const handleDelete = async () => {
     try {
       await removeRecipe(recipe.id);
+      toast.success('Recipe deleted');
       navigate('/');
     } catch {
-      // Error handled in hook
+      toast.error('Failed to delete recipe');
     }
   };
 
@@ -114,8 +117,10 @@ export default function RecipePage() {
     try {
       await addRecipeToList(listId, recipe.id);
       setShowGroceryModal(false);
+      const listName = lists.find(l => l.id === listId)?.name || 'list';
+      toast.success(`Added ingredients to "${listName}"`);
     } catch {
-      // Error handled in hook
+      toast.error('Failed to add to grocery list');
     } finally {
       setGroceryLoading(false);
     }
@@ -129,8 +134,9 @@ export default function RecipePage() {
       await addRecipeToList(newList.id, recipe.id);
       setNewListName('');
       setShowGroceryModal(false);
+      toast.success(`Added ingredients to "${newList.name}"`);
     } catch {
-      // Error handled in hook
+      toast.error('Failed to create list');
     } finally {
       setGroceryLoading(false);
     }
@@ -254,69 +260,77 @@ export default function RecipePage() {
 
       {/* Hero image */}
       {imageUrl && (
-        <div className="aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden mb-6 bg-cream-dark">
+        <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden mb-7 bg-surface-sunken">
           <img
             src={imageUrl}
             alt={recipe.title}
             className="w-full h-full object-cover"
           />
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <div className="rounded-full bg-surface/80 backdrop-blur-sm shadow-sm">
+              <FavoriteButton
+                recipeId={recipe.id}
+                initialFavorited={recipe.is_favorited}
+                size="lg"
+              />
+            </div>
+            <button
+              onClick={handleShareLink}
+              className="flex items-center justify-center p-2 rounded-full bg-surface/80 backdrop-blur-sm shadow-sm text-warm-gray hover:bg-surface hover:text-brown transition-all duration-200 min-w-[44px] min-h-[44px] print:hidden"
+              aria-label="Share recipe"
+            >
+              <Share2 size={20} />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Title and actions */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl md:text-4xl font-bold text-brown mb-2 font-serif">
-              {recipe.title}
-            </h1>
-            <FavoriteButton
-              recipeId={recipe.id}
-              initialFavorited={recipe.is_favorited}
-              size="lg"
-            />
-          </div>
-          <div className="mb-2">
-            <StarRating
-              value={recipe.user_rating || recipe.avg_rating || 0}
-              onChange={(score) => api.rateRecipe(recipe.id, score)}
-              size="md"
-            />
-          </div>
-          {recipe.description && (
-            <p className="text-brown-light text-lg leading-relaxed">
-              {recipe.description}
-            </p>
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-brown font-serif tracking-tight leading-tight">
+            {recipe.title}
+          </h1>
+          {canEdit && (
+            <div className="flex items-center gap-2 shrink-0 pt-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/edit/${recipe.id}`)}
+              >
+                <Edit size={16} />
+                Edit
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 size={16} />
+                Delete
+              </Button>
+            </div>
           )}
         </div>
-
-        {canEdit && (
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/edit/${recipe.id}`)}
-            >
-              <Edit size={16} />
-              Edit
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              <Trash2 size={16} />
-              Delete
-            </Button>
-          </div>
+        <div className="mb-2">
+          <StarRating
+            value={recipe.user_rating || recipe.avg_rating || 0}
+            onChange={(score) => api.rateRecipe(recipe.id, score)}
+            size="md"
+          />
+        </div>
+        {recipe.description && (
+          <p className="text-brown-light text-lg leading-relaxed max-w-[640px]">
+            {recipe.description}
+          </p>
         )}
       </div>
 
-      {/* Metadata row */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+      {/* Metadata bar */}
+      <div className="flex flex-wrap items-center gap-4 py-3 mb-4 border-t border-b border-cream-dark/60">
         {recipe.prep_time > 0 && (
           <div className="flex items-center gap-1.5 text-brown-light">
-            <Clock size={18} className="text-terracotta" />
+            <Clock size={16} className="text-terracotta" />
             <span className="text-sm">
               <span className="font-semibold">Prep:</span> {recipe.prep_time} min
             </span>
@@ -324,32 +338,41 @@ export default function RecipePage() {
         )}
         {recipe.cook_time > 0 && (
           <div className="flex items-center gap-1.5 text-brown-light">
-            <Clock size={18} className="text-terracotta" />
+            <Clock size={16} className="text-terracotta" />
             <span className="text-sm">
               <span className="font-semibold">Cook:</span> {recipe.cook_time} min
             </span>
           </div>
         )}
         {totalTime > 0 && (
-          <div className="flex items-center gap-1.5 text-brown-light">
-            <Clock size={18} className="text-sage" />
-            <span className="text-sm font-semibold">Total: {totalTime} min</span>
-          </div>
+          <>
+            <div className="hidden md:block w-px h-5 bg-cream-dark" />
+            <div className="flex items-center gap-1.5">
+              <Clock size={16} className="text-sage" />
+              <span className="text-sm font-semibold text-sage-dark">Total: {totalTime} min</span>
+            </div>
+          </>
         )}
         {recipe.servings && adjustedServings && (
-          <ServingsAdjuster
-            servings={adjustedServings}
-            onChange={setAdjustedServings}
-          />
+          <>
+            <div className="hidden md:block w-px h-5 bg-cream-dark" />
+            <ServingsAdjuster
+              servings={adjustedServings}
+              onChange={setAdjustedServings}
+            />
+          </>
         )}
-        {(() => {
-          const difficulty = estimateDifficulty(recipe);
-          return (
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}>
-              {difficulty}
-            </span>
-          );
-        })()}
+        <>
+          <div className="hidden md:block w-px h-5 bg-cream-dark" />
+          {(() => {
+            const difficulty = estimateDifficulty(recipe);
+            return (
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${DIFFICULTY_COLORS[difficulty]}`}>
+                {difficulty}
+              </span>
+            );
+          })()}
+        </>
       </div>
 
       {/* Scaling warning for significant adjustments */}
@@ -382,7 +405,7 @@ export default function RecipePage() {
       )}
 
       {/* Action buttons */}
-      <div className="flex flex-wrap gap-3 mb-8">
+      <div className="flex flex-wrap gap-2.5 mb-8">
         {instructions.length > 0 && (
           <Button onClick={() => setCookMode(true)} size="lg">
             <ChefHat size={20} />
@@ -414,14 +437,16 @@ export default function RecipePage() {
           <Printer size={18} />
           Print
         </Button>
-        <Button
-          variant="outline"
-          onClick={handleShareLink}
-          className="print:hidden"
-        >
-          <QrCode size={18} />
-          Share
-        </Button>
+        {!imageUrl && (
+          <Button
+            variant="outline"
+            onClick={handleShareLink}
+            className="print:hidden"
+          >
+            <QrCode size={18} />
+            Share
+          </Button>
+        )}
       </div>
 
       {/* Source URL */}
@@ -440,11 +465,14 @@ export default function RecipePage() {
       )}
 
       {/* Two-column content */}
-      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-7">
         {/* Ingredients */}
-        <div className="md:sticky md:top-20 md:self-start">
-          <div className="bg-surface rounded-2xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-brown mb-4">Ingredients</h2>
+        <div className="md:sticky md:top-6 md:self-start">
+          <div className="bg-surface rounded-2xl shadow-warm p-6">
+            <h2 className="text-lg font-bold text-brown mb-4 flex items-center gap-2">
+              <ListChecks size={20} className="text-terracotta" />
+              Ingredients
+            </h2>
             <IngredientList
               ingredients={scaledIngredients}
               annotations={annotations.ingredient}
@@ -455,8 +483,8 @@ export default function RecipePage() {
         </div>
 
         {/* Instructions */}
-        <div className="bg-surface rounded-2xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-brown mb-4">Instructions</h2>
+        <div className="bg-surface rounded-2xl shadow-warm p-6">
+          <h2 className="text-lg font-bold text-brown mb-4">Instructions</h2>
           <StepList
             steps={instructions}
             annotations={annotations.instruction}
@@ -493,8 +521,8 @@ export default function RecipePage() {
         return (
           <div className="mt-8">
             {/* Recipe Memories */}
-            <div className="bg-cream/60 rounded-xl px-5 py-4 mb-5 border border-cream-dark/30">
-              <h2 className="text-lg font-bold text-brown font-serif mb-2">Your History</h2>
+            <div className="bg-terracotta-50 rounded-2xl px-5 py-4 mb-5 border border-cream-dark/30">
+              <h2 className="text-lg font-bold text-brown font-display mb-2">Your History</h2>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-brown-light">
                 <span>
                   First made <span className="font-semibold text-brown">{firstDate}</span>
