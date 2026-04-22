@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Eye, Github, Shield } from 'lucide-react';
 import CookslateLogo from '../components/ui/CookslateLogo';
 import { useAuth } from '../hooks/useAuth';
@@ -182,9 +182,9 @@ export default function LoginPage() {
           Cookslate is a product of <a href="https://www.fmrdigital.dev" className="hover:text-warm-gray">FMR Digital LLC</a> &middot; &copy; 2026 FMR Digital LLC &middot; All rights reserved.
         </p>
         <p className="text-center text-xs text-warm-gray/60 mt-2">
-          <Link to="/privacy" className="hover:text-warm-gray">Privacy Policy</Link>
+          <a href="https://cookslate.app/privacy" className="hover:text-warm-gray">Privacy Policy</a>
           {' '}&middot;{' '}
-          <Link to="/terms" className="hover:text-warm-gray">Terms of Service</Link>
+          <a href="https://cookslate.app/terms" className="hover:text-warm-gray">Terms of Service</a>
         </p>
       </div>
     </div>
