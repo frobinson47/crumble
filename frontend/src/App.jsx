@@ -27,6 +27,8 @@ import IngredientDatabasePage from './pages/IngredientDatabasePage';
 import DiscoverPage from './pages/DiscoverPage';
 import InstallPage from './pages/InstallPage';
 import CollectionsPage from './pages/CollectionsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 function ProRoute({ children }) {
   const { active, loading } = useLicense();
@@ -47,6 +49,8 @@ export default function App() {
           <Route path="/install" element={<InstallPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/shared/:token" element={<SharedRecipePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
 
           {/* Protected routes */}
           <Route
