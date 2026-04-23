@@ -1,82 +1,101 @@
+<!-- auto-docs:start:header -->
 # Cookslate
 
-**Your recipes. Your way.**
+> A recipe manager that remembers how you cook — not just what you cook
 
-A recipe manager that remembers how *you* cook — not just what you cook. Self-hosted on any PHP hosting, no Docker required.
+| Field | Value |
+|-------|-------|
+| Status | beta |
+| Phase | grow |
+| Target launch | 2026-07-01 |
+| Stack | PHP 8.1, React 18, Vite, Tailwind CSS 4, MySQL 8 |
+<!-- auto-docs:end:header -->
 
-## Features
+<!-- auto-docs:preserved:start -->
+**Live demo:** [demo.cookslate.app](https://demo.cookslate.app) (login: demo / demo -- fully interactive, resets hourly)
 
-**Free (open source):**
-- Import recipes from any URL (auto-scrapes structured data)
-- Import from Mealie, Paprika, and Tandoor exports
+**No Docker required.** Runs on any PHP 8.1+ hosting with MySQL. Docker Compose included if you prefer it.
+
+### Features
+
+**Core (free, MIT licensed):**
+- Import recipes from any URL -- paste a link, structured data is scraped automatically
+- Cook Mode -- step-by-step instructions with built-in timers, screen wake lock, and vibration alerts
+- Grocery lists with smart consolidation (combines "1 cup milk" + "2 cups milk" automatically)
 - Full-text search across titles, descriptions, and ingredients
-- Tags, favorites, and ratings
-- Cook Mode — step-by-step with timers, wake lock, and vibration alerts
-- Serving scaling — adjust servings and ingredients recalculate
-- Grocery lists with smart ingredient consolidation
-- Pantry tracking — mark always-stocked items, auto-detected on future lists
-- Shoppable quantities — converts recipe amounts to store-buyable packages
-- Recipe collections — organize recipes into named groups
-- Private recipes — mark recipes as only visible to you
-- Ingredient database with nutrition data and USDA lookup
-- Discover recipes from the web (search + import)
-- Cook logging and history
-- Calorie display on recipe cards
-- Dark mode & mobile responsive
+- Bulk import from Mealie, Paprika, and Tandoor
+- JSON-LD and Cooklang export for data portability
+- Authentik SSO support (zero-library, header-based)
+- Mobile-first responsive design with 44px+ tap targets
 
-**Pro ($29.99 one-time — launch special $9.99 until July 1, 2026):**
-- Meal planning with weekly drag-and-drop calendar
-- iCal export — sync meal plans to your calendar app
-- Grocery list generation from meal plans
-- Cook tracking stats, streaks, and forgotten favorites
-- Recipe annotations (margin notes)
-- Multi-user household support (up to 5)
-- Data export (JSON-LD, Cooklang)
-- PWA with offline support
+**Pro tier ($29.99 one-time, BSL licensed):**
+- Meal planning with drag-and-drop weekly calendar and iCal export
+- Shoppable grocery quantities (converts "2 cups milk" to "Milk - 1 gallon")
+- Pantry tracking -- mark always-stocked items, auto-detected on grocery lists
+- Recipe annotations (margin notes on ingredients and steps)
+- Ingredient database with USDA nutrition data, package sizes, and substitutions
+- Household tier ($49.99) supports up to 5 users
+<!-- auto-docs:preserved:end -->
 
-## Quick Start (Docker)
+<!-- auto-docs:start:description -->
+## What is this?
 
-```bash
-git clone https://github.com/frobinson47/cookslate.git
-cd cookslate
-docker compose up -d
-```
+Self-hosted recipe management app with Cook Mode, grocery lists, and pantry tracking
 
-Visit `http://localhost:8080` and run the install wizard to create your admin account. That's it.
+**Target users:** Home cooks, privacy-conscious families, self-hosting enthusiasts
+<!-- auto-docs:end:description -->
 
-## Quick Start (Manual)
+<!-- auto-docs:start:pricing -->
+## Pricing
 
-1. Clone the repo to your web server's document root
-2. Copy `api/.env.example` to `api/.env` and configure database credentials
-3. Create a MySQL database and import `database/schema.sql`
-4. Run `cd frontend && npm install && npm run build`
-5. Point your web server to the project root (Apache with mod_rewrite, or Caddy)
-6. Visit your site and run the install wizard at `/api/install.php`
-7. Start importing recipes!
+| Tier | Price | What you get |
+|------|-------|-------------|
+| Free | $0 | Full recipe management, import, search, Cook Mode, grocery lists |
+| Pro | $29.99 one-time | Meal planning, shoppable quantities, pantry, annotations, nutrition |
+| Household | $49.99 one-time | Everything in Pro for up to 5 users |
 
-## Requirements
+Open-core model: free tier is MIT licensed, Pro/Household features are BSL 1.1 (converts to MIT in 2029).
+<!-- auto-docs:end:pricing -->
 
-**Docker:** Just Docker and Docker Compose.
 
-**Manual install:**
-- PHP 8.1+ with GD, PDO MySQL, OpenSSL extensions
-- MySQL 8.0+
-- Node.js 18+ (for building the frontend)
-- Apache with mod_rewrite (or Caddy/Nginx with equivalent config)
 
-## Tech Stack
+<!-- auto-docs:start:docs -->
+## Documentation
 
-- **Backend:** PHP (custom microframework, no dependencies)
-- **Frontend:** React 18 + Vite + Tailwind CSS 4
-- **Database:** MySQL
-- **Icons:** Lucide React
+- [Setup Guide](docs/SETUP.md) -- getting the dev environment running
+- [Architecture](docs/ARCHITECTURE.md) -- stack, components, and decisions
+- [Changelog](docs/CHANGELOG.md) -- release history
+<!-- auto-docs:end:docs -->
 
-## License
+<!-- auto-docs:start:screenshots -->
+## Screenshots
 
-- Free-tier code (`api/`, `frontend/src/`, excluding `pro/` directories): [MIT](LICENSE)
-- Pro-tier code (`api/pro/`, `frontend/src/pro/`): [BSL 1.1](LICENSE-BSL.md) — converts to MIT on 2029-03-24
+![Recipe dashboard](screenshots/main_page.png)
+*Recipe dashboard with featured recipe, tag filters, and recent activity*
 
-## Links
+![Recipe detail](screenshots/recipe_page.png)
+*Recipe detail view with ingredients, instructions, and Cook Mode launcher*
 
-- [Get a Pro license](https://cookslate.app)
-- [Report a bug](https://github.com/frobinson47/cookslate/issues)
+![Cook Mode](screenshots/cook_mode.png)
+*Cook Mode -- step-by-step instructions with ingredient sidebar*
+
+![Grocery list](screenshots/grocery_list.png)
+*Grocery list generated from meal plan with source recipe tracking*
+
+![Discover recipes](screenshots/discover.png)
+*Discover page for browsing world recipes by category*
+
+![Dark mode](screenshots/dark_mode.png)
+*Full dark mode support*
+
+<!-- auto-docs:end:screenshots -->
+
+<!-- auto-docs:start:contact -->
+## Contact
+
+https://github.com/frobinson47/cookslate/issues
+<!-- auto-docs:end:contact -->
+
+---
+
+_Generated by `auto-docs` -- Re-render with `python scripts/docs_tool.py generate cookslate`_
