@@ -121,4 +121,40 @@ class User {
         $stmt->execute([$id]);
         return (bool) $stmt->fetch();
     }
+
+    /**
+     * Create a password reset token for a user. Returns the token string.
+     * Tokens expire after the given number of hours (default 24).
+     */
+    public function createResetToken(int $userId, int $expiresInHours = 24): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->db->prepare(
+            'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))'
+        );
+        $stmt->execute([$userId, $token, $expiresInHours]);
+        return $token;
+    }
+
+    /**
+     * Find a valid (unused, unexpired) reset token. Returns user_id or null.
+     */
+    public function findValidResetToken(string $token): ?int
+    {
+        $stmt = $this->db->prepare(
+            'SELECT user_id FROM password_reset_tokens WHERE token = ? AND used_at IS NULL AND expires_at > NOW()'
+        );
+        $stmt->execute([$token]);
+        $row = $stmt->fetch();
+        return $row ? (int) $row['user_id'] : null;
+    }
+
+    /**
+     * Mark a reset token as used.
+     */
+    public function consumeResetToken(string $token): void
+    {
+        $stmt = $this->db->prepare('UPDATE password_reset_tokens SET used_at = NOW() WHERE token = ?');
+        $stmt->execute([$token]);
+    }
 }

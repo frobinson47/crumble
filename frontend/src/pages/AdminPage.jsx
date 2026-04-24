@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Key, Trash2, Pencil, AlertCircle, Download, Users } from 'lucide-react';
+import { Shield, Plus, Key, Trash2, Pencil, AlertCircle, Download, Users, Link2, Copy, Check } from 'lucide-react';
 import * as api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useLicense } from '../hooks/useLicense';
@@ -38,6 +38,12 @@ export default function AdminPage() {
   // Reset password form
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState(null);
+
+  // Reset link
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [resetLink, setResetLink] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -107,6 +113,41 @@ export default function AdminPage() {
       setSelectedUser(null);
     } catch (err) {
       setResetError(err.message);
+    }
+  };
+
+  const handleGenerateLink = async (u) => {
+    setSelectedUser(u);
+    setLinkLoading(true);
+    setLinkCopied(false);
+    setShowLinkModal(true);
+    try {
+      const data = await api.generateResetLink(u.id);
+      const link = `${window.location.origin}/reset-password/${data.token}`;
+      setResetLink(link);
+    } catch (err) {
+      setResetLink('');
+      setResetError(err.message);
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Fallback for non-HTTPS
+      const input = document.createElement('input');
+      input.value = resetLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
     }
   };
 
@@ -233,6 +274,13 @@ export default function AdminPage() {
                     >
                       <Key size={14} />
                       Reset Password
+                    </button>
+                    <button
+                      onClick={() => handleGenerateLink(u)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-warm-gray hover:text-brown rounded-lg hover:bg-cream-dark transition-colors min-h-[36px]"
+                    >
+                      <Link2 size={14} />
+                      Reset Link
                     </button>
                     {u.id !== user?.id && (
                       <button
@@ -439,6 +487,62 @@ export default function AdminPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Reset link modal */}
+      <Modal
+        isOpen={showLinkModal}
+        onClose={() => {
+          setShowLinkModal(false);
+          setResetLink('');
+          setResetError(null);
+          setSelectedUser(null);
+        }}
+        title={`Reset Link: ${selectedUser?.username}`}
+        size="sm"
+      >
+        <div className="space-y-4">
+          {linkLoading ? (
+            <div className="flex justify-center py-4">
+              <Spinner />
+            </div>
+          ) : resetLink ? (
+            <>
+              <p className="text-sm text-brown-light">
+                Send this link to <span className="font-semibold">{selectedUser?.username}</span>. It expires in 24 hours and can only be used once.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={resetLink}
+                  className="flex-1 px-3 py-2 bg-cream rounded-xl text-sm text-brown border border-cream-dark select-all"
+                  onClick={(e) => e.target.select()}
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="shrink-0 p-2 rounded-xl bg-terracotta text-white hover:bg-terracotta-dark transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  aria-label="Copy link"
+                >
+                  {linkCopied ? <Check size={18} /> : <Copy size={18} />}
+                </button>
+              </div>
+              {linkCopied && (
+                <p className="text-sm text-green-600 font-medium">Copied to clipboard!</p>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
+              <AlertCircle size={16} />
+              <span>{resetError || 'Failed to generate link'}</span>
+            </div>
+          )}
+          <div className="flex justify-end pt-2">
+            <Button variant="ghost" onClick={() => { setShowLinkModal(false); setResetLink(''); setSelectedUser(null); }}>
+              Close
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -29,6 +29,7 @@ import InstallPage from './pages/InstallPage';
 import CollectionsPage from './pages/CollectionsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function ProRoute({ children }) {
   const { active, loading } = useLicense();
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/shared/:token" element={<SharedRecipePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
           {/* Protected routes */}
           <Route

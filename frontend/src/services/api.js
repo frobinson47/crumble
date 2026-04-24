@@ -263,6 +263,14 @@ export function resetPassword(id, newPassword) {
   return request(`/users/${id}/password`, { method: 'PUT', body: { password: newPassword } });
 }
 
+export function generateResetLink(id) {
+  return request(`/users/${id}/reset-link`, { method: 'POST' });
+}
+
+export function consumeResetToken(token, newPassword) {
+  return request('/auth/reset-password', { method: 'POST', body: { token, password: newPassword } });
+}
+
 export function updateUser(id, data) {
   return request(`/users/${id}`, { method: 'PUT', body: data });
 }

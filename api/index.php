@@ -88,7 +88,7 @@ try {
     $subId = $segments[3] ?? null;
 
     // ── CSRF Protection (exempt login — user has no session yet) ────────
-    $csrfExempt = ($resource === 'auth' && in_array($id, ['login', 'oauth', 'sso-config']));
+    $csrfExempt = ($resource === 'auth' && in_array($id, ['login', 'oauth', 'sso-config', 'reset-password']));
     if (!$csrfExempt) {
         Csrf::enforce();
     }
@@ -152,6 +152,47 @@ try {
                         require_once __DIR__ . '/controllers/OAuthController.php';
                         $oauthController = new OAuthController();
                         $response = $oauthController->config();
+                    }
+                    break;
+                case 'reset-password':
+                    // POST /auth/reset-password — public, consumes a reset token
+                    if ($method === 'POST') {
+                        $input = json_decode(file_get_contents('php://input'), true);
+                        $token = $input['token'] ?? '';
+                        $newPassword = $input['password'] ?? '';
+
+                        if (empty($token) || empty($newPassword)) {
+                            http_response_code(400);
+                            $response = ['error' => 'Token and new password are required', 'code' => 400];
+                            break;
+                        }
+
+                        require_once __DIR__ . '/services/PasswordValidator.php';
+                        $validator = new PasswordValidator();
+                        $passwordResult = $validator->validate($newPassword);
+                        if (!$passwordResult['valid']) {
+                            http_response_code(400);
+                            $response = ['error' => implode('. ', $passwordResult['errors']), 'code' => 400];
+                            break;
+                        }
+
+                        require_once __DIR__ . '/models/User.php';
+                        $userModel = new User();
+                        $userId = $userModel->findValidResetToken($token);
+                        if (!$userId) {
+                            http_response_code(400);
+                            $response = ['error' => 'Invalid or expired reset link', 'code' => 400];
+                            break;
+                        }
+
+                        $userModel->resetPassword($userId, $newPassword);
+                        $userModel->consumeResetToken($token);
+                        $userModel->resetFailedAttempts($userId);
+
+                        require_once __DIR__ . '/services/LoggerService.php';
+                        LoggerService::channel('user')->info('Password reset via token', ['user_id' => $userId]);
+
+                        $response = ['message' => 'Password has been reset. You can now log in.'];
                     }
                     break;
             }
@@ -604,6 +645,9 @@ try {
                 if ($method === 'PUT') {
                     $response = $controller->resetPassword((int) $id);
                 }
+            } elseif (is_numeric($id) && $subResource === 'reset-link' && $method === 'POST') {
+                // POST /users/{id}/reset-link
+                $response = $controller->generateResetLink((int) $id);
             } elseif (is_numeric($id) && $subResource === null && $method === 'DELETE') {
                 // DELETE /users/{id}
                 $response = $controller->delete((int) $id);

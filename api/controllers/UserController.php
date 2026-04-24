@@ -175,4 +175,28 @@ class UserController {
         $userModel->resetPassword($id, $input['password']);
         return ['message' => 'Password reset successfully'];
     }
+
+    /**
+     * POST /users/{id}/reset-link
+     * Admin only. Generate a one-time password reset link for a user.
+     */
+    public function generateResetLink(int $id): array {
+        Auth::requireAdmin();
+
+        $userModel = new User();
+        $user = $userModel->findById($id);
+
+        if (!$user) {
+            http_response_code(404);
+            return ['error' => 'User not found', 'code' => 404];
+        }
+
+        $token = $userModel->createResetToken($id);
+        LoggerService::channel('user')->info('Password reset link generated', ['target_user_id' => $id, 'by_user_id' => $_SESSION['user_id'] ?? null]);
+
+        return [
+            'token' => $token,
+            'message' => 'Reset link generated. It expires in 24 hours.',
+        ];
+    }
 }
