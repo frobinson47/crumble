@@ -6,6 +6,40 @@ import { useAuth } from '../../hooks/useAuth';
 import useTheme from '../../hooks/useTheme';
 import { useLicense } from '../../hooks/useLicense';
 
+function DesktopExportMenu() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 text-sm font-medium"
+      >
+        <Download size={18} />
+        <span className="flex-1">Export Recipes</span>
+        <ChevronRight size={14} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="ml-7 mt-1 space-y-0.5">
+          <a
+            href="/api/recipes/export-zip"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150"
+          >
+            <Download size={14} />
+            <span>ZIP (Full Backup)</span>
+          </a>
+          <a
+            href="/api/recipes/export-cooklang"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150"
+          >
+            <FileText size={14} />
+            <span>Cooklang (.cook)</span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NavIcon({ to, icon: Icon, label, end = false }) {
   return (
     <NavLink
@@ -137,6 +171,7 @@ export default function Sidebar() {
         {expanded ? (
           <>
             <div className="h-px bg-cream-dark my-2" />
+            <DesktopExportMenu />
             <button
               onClick={cycle}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left text-warm-gray hover:bg-cream-dark hover:text-brown transition-colors duration-150 text-sm font-medium"
