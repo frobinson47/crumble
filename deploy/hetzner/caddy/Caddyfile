@@ -1,0 +1,11 @@
+hookhouse-pro.app, www.hookhouse-pro.app {
+    reverse_proxy hookhouse-app-1:3002
+}
+
+home.cookslate.app {
+    reverse_proxy cookslate-app:80
+}
+
+demo.cookslate.app {
+    reverse_proxy cookslate-demo-app:80
+}

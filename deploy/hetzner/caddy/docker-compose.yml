@@ -1,0 +1,28 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - hookhouse_default
+      - cookslate_default
+      - cookslate-demo_default
+
+networks:
+  hookhouse_default:
+    external: true
+  cookslate_default:
+    external: true
+  cookslate-demo_default:
+    external: true
+
+volumes:
+  caddy-data:
+  caddy-config:
